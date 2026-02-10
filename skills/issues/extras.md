@@ -1,5 +1,14 @@
 # Issues Extras
 
+## Cross-Repo Dependencies
+
+The `tea-dep` script works within the current repo. For cross-repo dependencies, use the API helpers directly:
+
+```bash
+source scripts/tea-api
+_api_post "issues/10/dependencies" '{"index": 5, "owner": "other-owner", "repo": "other-repo"}'
+```
+
 ## Bulk Operations
 
 ```bash

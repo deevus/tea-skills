@@ -1,6 +1,6 @@
 ---
 name: issues
-description: Manage Gitea/Forgejo issues using the tea CLI. Use when creating, editing, listing, closing, or bulk-operating on issues.
+description: Manage Gitea/Forgejo issues using the tea CLI. Use when creating, editing, listing, closing, managing dependencies, or bulk-operating on issues.
 ---
 
 # Tea Issues
@@ -53,6 +53,19 @@ tea issues edit 1 2 3 --add-labels "sprint-5" # edit multiple
 tea comment 42 "This is a comment"
 ```
 
+## Dependencies
+
+"A depends on B" means B must be done first. B *blocks* A. Not in `tea` CLI — use `scripts/tea-dep`.
+
+```bash
+scripts/tea-dep add 25 26       # #25 depends on #26
+scripts/tea-dep rm 25 26        # remove dependency
+scripts/tea-dep list 25         # what blocks #25
+scripts/tea-dep all             # all dependencies for open issues
+scripts/tea-dep ready           # issues with no open blockers
+scripts/tea-dep graph           # text visualization of all deps
+```
+
 ## Close / Reopen
 
 ```bash
@@ -66,4 +79,4 @@ tea issues reopen 42
 - `--kind pulls` searches PRs with the same filters as issues
 - `--add-labels` / `--remove-labels` are additive/subtractive, not replacing
 
-For bulk operations, see `extras.md`. For API features (pin, reactions, lock, comments), see `api.md` — backed by scripts in `scripts/`.
+For bulk operations and cross-repo dependencies, see `extras.md`. For API features (pin, reactions, lock, comments), see `api.md` — backed by scripts in `scripts/`.

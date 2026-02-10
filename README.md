@@ -6,11 +6,10 @@ Claude Code skills for Gitea/Forgejo workflows using the [tea CLI](https://gitea
 
 | Skill | Invocation | Description |
 |---|---|---|
-| Issues | `tea:issues` | List, create, edit, close issues |
+| Issues | `tea:issues` | List, create, edit, close, dependencies |
 | Pull Requests | `tea:pulls` | Create, review, merge PRs |
 | Milestones | `tea:milestones` | Create, close, manage milestone issues |
 | Labels | `tea:labels` | Create, update, delete, apply labels |
-| Dependencies | `tea:issue-dependencies` | Add, remove, list issue dependencies |
 
 Each skill has a lean `SKILL.md` loaded into context, with optional companion files:
 
@@ -79,10 +78,7 @@ tea-skills/
 │   ├── milestones/
 │   │   ├── SKILL.md
 │   │   └── extras.md
-│   ├── labels/
-│   │   ├── SKILL.md
-│   │   └── extras.md
-│   └── issue-dependencies/
+│   └── labels/
 │       ├── SKILL.md
 │       └── extras.md
 ├── README.md
