@@ -3,7 +3,7 @@
   "description": "Skills for Gitea/Forgejo workflows using the tea CLI",
   "version": "0.1.0",
   "author": {
-    "name": "sh"
+    "name": "Simon Hartcher"
   },
   "license": "MIT",
   "keywords": [

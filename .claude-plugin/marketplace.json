@@ -1,0 +1,15 @@
+{
+  "name": "tea-skills",
+  "description": "Skills for Gitea/Forgejo workflows using the tea CLI",
+  "owner": {
+    "name": "Simon Hartcher"
+  },
+  "plugins": [
+    {
+      "name": "tea",
+      "description": "Skills for Gitea/Forgejo workflows using the tea CLI",
+      "version": "0.1.0",
+      "source": "./"
+    }
+  ]
+}
