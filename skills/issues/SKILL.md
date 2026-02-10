@@ -1,5 +1,5 @@
 ---
-name: tea-issues
+name: issues
 description: Manage Gitea/Forgejo issues using the tea CLI and API. Use when creating, editing, listing, closing, or bulk-operating on issues.
 ---
 

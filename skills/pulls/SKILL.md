@@ -1,5 +1,5 @@
 ---
-name: tea-pulls
+name: pulls
 description: Manage Gitea/Forgejo pull requests using the tea CLI and API. Use when creating, reviewing, merging, or managing PRs.
 ---
 
