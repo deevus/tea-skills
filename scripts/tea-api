@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Shared API setup — source this from other scripts: source "$(dirname "$0")/tea-api"
+set -euo pipefail
+
+TOKEN=$(grep 'token:' ~/.config/tea/config.yml | head -1 | awk '{print $2}')
+BASE_URL=$(grep 'url:' ~/.config/tea/config.yml | head -1 | awk '{print $2}')
+OWNER=$(git remote get-url origin | sed -E 's|.*[:/]([^/]+)/([^/]+?)(\.git)?$|\1|')
+REPO=$(git remote get-url origin | sed -E 's|.*[:/]([^/]+)/([^/]+?)(\.git)?$|\2|' | sed 's/\.git$//')
+API="$BASE_URL/api/v1/repos/$OWNER/$REPO"
+
+_auth() { echo "Authorization: token $TOKEN"; }
+_json() { echo "Content-Type: application/json"; }
+
+_api_get()    { curl -sf "$API/$1" -H "$(_auth)"; }
+_api_post()   { curl -sf -X POST "$API/$1" -H "$(_auth)" -H "$(_json)" -d "$2"; }
+_api_patch()  { curl -sf -X PATCH "$API/$1" -H "$(_auth)" -H "$(_json)" -d "$2"; }
+_api_delete() { curl -sf -X DELETE "$API/$1" -H "$(_auth)" ${2:+-H "$(_json)" -d "$2"}; }
+
+# POST/DELETE with HTTP status code returned (for error handling)
+_api_post_status()   { curl -s -o /dev/null -w "%{http_code}" -X POST "$API/$1" -H "$(_auth)" -H "$(_json)" -d "$2"; }
+_api_delete_status() { curl -s -o /dev/null -w "%{http_code}" -X DELETE "$API/$1" -H "$(_auth)" -H "$(_json)" -d "$2"; }

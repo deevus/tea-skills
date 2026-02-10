@@ -72,4 +72,4 @@ tea pulls create --title "$(git log -1 --format=%s)" --head "$(git branch --show
 - Merge styles: `merge`, `squash`, `rebase`, `rebase-merge`
 - `tea pulls checkout` creates a local tracking branch
 
-For draft PRs, reviewers, auto-merge, and review comments via API, see `api.md`. API setup: `_api-setup.md`.
+For draft PRs, reviewers, auto-merge, and review comments via API, see `api.md` — backed by scripts in `scripts/`.

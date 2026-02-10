@@ -60,4 +60,4 @@ tea issues reopen 42
 - `--kind pulls` searches PRs with the same filters as issues
 - `--add-labels` / `--remove-labels` are additive/subtractive, not replacing
 
-For bulk operations, see `extras.md`. For API features (pin, reactions, lock, comments), see `api.md`. API setup: `_api-setup.md`.
+For bulk operations, see `extras.md`. For API features (pin, reactions, lock, comments), see `api.md` — backed by scripts in `scripts/`.

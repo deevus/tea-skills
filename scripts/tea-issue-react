@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Add or list reactions on an issue
+# Usage: tea-issue-react add <issue> <reaction>    (reactions: +1 -1 laugh confused heart hooray rocket eyes)
+#        tea-issue-react list <issue>
+source "$(dirname "$0")/tea-api"
+
+action="${1:?Usage: tea-issue-react <add|list> <issue> [reaction]}"
+issue="${2:?Usage: tea-issue-react <add|list> <issue> [reaction]}"
+
+case "$action" in
+  add)
+    reaction="${3:?Usage: tea-issue-react add <issue> <reaction>}"
+    _api_post "issues/$issue/reactions" "{\"content\": \"$reaction\"}" | jq -r '"Added \(.content) to #'"$issue"'"'
+    ;;
+  list)
+    _api_get "issues/$issue/reactions" | jq -r '.[] | "\(.user.login): \(.content)"'
+    ;;
+  *) echo "Unknown action: $action (use add or list)" >&2; exit 1 ;;
+esac

@@ -52,4 +52,4 @@ tea milestones issues remove "v1.0" 42                    # unassign issue
 - Deadlines accept date strings like `2025-06-01`
 - Deleting a milestone doesn't close its issues — they just become unassigned
 
-For editing milestones, bulk assignment, progress tracking, and burndown patterns, see `extras.md`. API setup: `_api-setup.md`.
+For editing milestones (via `scripts/tea-milestone-edit`), bulk assignment, progress tracking, and burndown, see `extras.md`.

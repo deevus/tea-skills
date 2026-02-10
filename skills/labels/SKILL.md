@@ -52,4 +52,4 @@ tea issues edit 42 --remove-labels "status:needs-triage"
 - Names are case-sensitive
 - Deleting a label removes it from all issues/PRs
 
-For naming conventions, bulk export/import, and org-level labels, see `extras.md`. API setup: `_api-setup.md`.
+For naming conventions, bulk export/import, and org-level labels (via `scripts/tea-label-org`), see `extras.md`.

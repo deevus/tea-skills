@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Pin or unpin an issue
+# Usage: tea-issue-pin <pin|unpin> <issue-number>
+source "$(dirname "$0")/tea-api"
+
+action="${1:?Usage: tea-issue-pin <pin|unpin> <issue>}"
+issue="${2:?Usage: tea-issue-pin <pin|unpin> <issue>}"
+
+case "$action" in
+  pin)   _api_post "issues/$issue/pin" '{}' > /dev/null && echo "Pinned #$issue" ;;
+  unpin) _api_delete "issues/$issue/pin" && echo "Unpinned #$issue" ;;
+  *)     echo "Unknown action: $action (use pin or unpin)" >&2; exit 1 ;;
+esac

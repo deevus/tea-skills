@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Create a draft PR or mark an existing PR as ready
+# Usage: tea-pr-draft create <title> <head> [base]
+#        tea-pr-draft ready <pr-number>
+source "$(dirname "$0")/tea-api"
+
+action="${1:?Usage: tea-pr-draft <create|ready> ...}"
+
+case "$action" in
+  create)
+    title="${2:?Usage: tea-pr-draft create <title> <head> [base]}"
+    head="${3:?Usage: tea-pr-draft create <title> <head> [base]}"
+    base="${4:-main}"
+    _api_post "pulls" "{\"title\": \"$title\", \"head\": \"$head\", \"base\": \"$base\", \"draft\": true}" | \
+      jq -r '"Created draft PR #\(.number): \(.title)"'
+    ;;
+  ready)
+    pr="${2:?Usage: tea-pr-draft ready <pr-number>}"
+    _api_patch "pulls/$pr" '{"draft": false}' | jq -r '"PR #\(.number) marked as ready for review"'
+    ;;
+  *) echo "Unknown action: $action (use create or ready)" >&2; exit 1 ;;
+esac

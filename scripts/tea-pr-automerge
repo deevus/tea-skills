@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Enable or cancel auto-merge on a PR
+# Usage: tea-pr-automerge enable <pr-number> [style] [message]
+#        tea-pr-automerge cancel <pr-number>
+#   style: merge, squash, rebase (default: squash)
+source "$(dirname "$0")/tea-api"
+
+action="${1:?Usage: tea-pr-automerge <enable|cancel> <pr> [style] [message]}"
+pr="${2:?Usage: tea-pr-automerge <enable|cancel> <pr> [style] [message]}"
+
+case "$action" in
+  enable)
+    style="${3:-squash}"
+    message="${4:-}"
+    _api_post "pulls/$pr/merge" "{\"Do\": \"$style\", \"merge_when_checks_succeed\": true${message:+, \"merge_message_field\": \"$message\"}}" > /dev/null && \
+      echo "Auto-merge enabled on PR #$pr ($style)"
+    ;;
+  cancel)
+    _api_delete "pulls/$pr/merge" && echo "Auto-merge cancelled on PR #$pr"
+    ;;
+  *) echo "Unknown action: $action (use enable or cancel)" >&2; exit 1 ;;
+esac

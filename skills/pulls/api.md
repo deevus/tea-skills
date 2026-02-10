@@ -1,68 +1,51 @@
 # Pulls API
 
-For features not available in `tea` CLI. See `_api-setup.md` for credentials setup.
+Features not available in `tea` CLI. Use scripts from `scripts/`.
 
 ## Draft PRs
 
 ```bash
-# Create draft
-curl -s -X POST "$API/pulls" \
-  -H "Authorization: token $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"title": "WIP: Feature", "body": "Work in progress", "head": "feature-branch", "base": "main", "draft": true}'
-
-# Mark ready
-curl -s -X PATCH "$API/pulls/15" \
-  -H "Authorization: token $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"draft": false}'
+scripts/tea-pr-draft create "WIP: Feature" feature-branch         # draft to main
+scripts/tea-pr-draft create "WIP: Feature" feature-branch develop  # draft to develop
+scripts/tea-pr-draft ready 15                                      # mark ready
 ```
 
 ## Request Reviewers
 
 ```bash
-curl -s -X POST "$API/pulls/15/requested_reviewers" \
-  -H "Authorization: token $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"reviewers": ["user1", "user2"]}'
-
-# Remove
-curl -s -X DELETE "$API/pulls/15/requested_reviewers" \
-  -H "Authorization: token $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"reviewers": ["user1"]}'
+scripts/tea-pr-reviewers add 15 "user1,user2"
+scripts/tea-pr-reviewers remove 15 "user1"
 ```
 
 ## Auto-Merge
 
 ```bash
-# Enable (merges when checks pass)
-curl -s -X POST "$API/pulls/15/merge" \
-  -H "Authorization: token $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"Do": "squash", "merge_when_checks_succeed": true, "merge_message_field": "feat: add auth"}'
-
-# Cancel
-curl -s -X DELETE "$API/pulls/15/merge" -H "Authorization: token $TOKEN"
+scripts/tea-pr-automerge enable 15                          # squash (default)
+scripts/tea-pr-automerge enable 15 merge                    # merge commit
+scripts/tea-pr-automerge enable 15 squash "feat: add auth"  # with message
+scripts/tea-pr-automerge cancel 15
 ```
 
 ## Diff / Patch / Files
 
+These are lightweight enough to use inline via `scripts/tea-api`.
+
 ```bash
-curl -s "$API/pulls/15.diff" -H "Authorization: token $TOKEN"
-curl -s "$API/pulls/15.patch" -H "Authorization: token $TOKEN"
-curl -s "$API/pulls/15/files" -H "Authorization: token $TOKEN" | jq '.[].filename'
+source scripts/tea-api
+_api_get "pulls/15.diff"
+_api_get "pulls/15.patch"
+_api_get "pulls/15/files" | jq '.[].filename'
 ```
 
 ## Reviews with Inline Comments
 
+Complex reviews use the API helpers from `scripts/tea-api`.
+
 ```bash
-curl -s -X POST "$API/pulls/15/reviews" \
-  -H "Authorization: token $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "event": "REQUEST_CHANGES",
-    "body": "Please fix the noted issues",
-    "comments": [{"path": "src/auth.go", "new_position": 15, "body": "Validate token expiry"}]
-  }'
+source scripts/tea-api
+_api_post "pulls/15/reviews" '{
+  "event": "REQUEST_CHANGES",
+  "body": "Please fix the noted issues",
+  "comments": [{"path": "src/auth.go", "new_position": 15, "body": "Validate token expiry"}]
+}'
 ```

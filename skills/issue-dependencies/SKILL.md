@@ -5,43 +5,28 @@ description: Manage Gitea/Forgejo issue dependencies via API. Use when adding, r
 
 # Tea Issue Dependencies
 
-The `tea` CLI doesn't support dependencies. Use the API directly. See `_api-setup.md` for credentials.
+The `tea` CLI doesn't support dependencies. Use `scripts/tea-dep`.
 
 ## Terminology
 
-- **"A depends on B"** → B must be done first. B *blocks* A.
-- API: POST to `issues/A/dependencies` with B's index = "A depends on B".
+- **"A depends on B"** -> B must be done first. B *blocks* A.
 
-## Add / Remove / List
+## Commands
 
 ```bash
-# List what blocks #25
-curl -s "$API/issues/25/dependencies" \
-  -H "Authorization: token $TOKEN" | jq '.[] | {number, title, state}'
+scripts/tea-dep add 25 26       # #25 depends on #26
+scripts/tea-dep rm 25 26        # remove dependency
+scripts/tea-dep list 25         # what blocks #25
+scripts/tea-dep all             # all dependencies for open issues
+scripts/tea-dep ready           # issues with no open blockers
+scripts/tea-dep graph           # text visualization of all deps
 
-# Make #25 depend on #26
-curl -s -X POST "$API/issues/25/dependencies" \
-  -H "Authorization: token $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"index": 26, "owner": "'"$OWNER"'", "repo": "'"$REPO"'"}'
-
-# Remove dependency
-curl -s -X DELETE "$API/issues/25/dependencies" \
-  -H "Authorization: token $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"index": 26, "owner": "'"$OWNER"'", "repo": "'"$REPO"'"}'
-
-# Cross-repo: #10 here depends on #5 in another-repo
-curl -s -X POST "$API/issues/10/dependencies" \
-  -H "Authorization: token $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"index": 5, "owner": "other-owner", "repo": "other-repo"}'
+# Bulk
+for pair in "25 26" "9 26" "23 22"; do scripts/tea-dep add $pair; done
 ```
 
 ## Tips
 
 - Dependencies appear in Forgejo web UI on each issue
-- Cross-repo dependencies supported via owner/repo in JSON body
+- Cross-repo dependencies supported (edit script for different owner/repo)
 - If API calls fail with 401, refresh token with `tea login`
-
-For shell helper functions (tea-dep-add, tea-dep-list, tea-dep-ready, tea-dep-graph), see `extras.md`.

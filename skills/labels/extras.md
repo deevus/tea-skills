@@ -52,7 +52,7 @@ tea labels list -r owner/source-repo --output json | \
 # Delete all labels
 tea labels list --output json | jq -r '.[].id' | xargs -I{} tea labels delete {}
 
-# Rename prefix (e.g., kind: → type:)
+# Rename prefix (e.g., kind: -> type:)
 tea labels list --output json | \
   jq -r '.[] | select(.name | startswith("kind:")) | "\(.id) \(.name)"' | \
   while read id name; do
@@ -64,19 +64,9 @@ tea issues list --labels "type:bug" --state open --output json | \
   jq -r '.[].index' | xargs -I{} tea issues edit {} --add-labels "sprint:current"
 ```
 
-## Organization-Level Labels (API)
-
-See `_api-setup.md` for credentials.
+## Organization-Level Labels
 
 ```bash
-ORG_API="$BASE_URL/api/v1/orgs/$OWNER"
-
-# List org labels
-curl -s "$ORG_API/labels" -H "Authorization: token $TOKEN" | jq '.[].name'
-
-# Create org label
-curl -s -X POST "$ORG_API/labels" \
-  -H "Authorization: token $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "org:team-a", "color": "#0052cc", "description": "Owned by Team A"}'
+scripts/tea-label-org list
+scripts/tea-label-org create "org:team-a" "#0052cc" "Owned by Team A"
 ```

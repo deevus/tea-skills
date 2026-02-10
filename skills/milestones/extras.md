@@ -2,22 +2,12 @@
 
 ## Edit Milestone (API)
 
-The `tea` CLI doesn't have a milestone edit command. See `_api-setup.md` for credentials.
+The `tea` CLI doesn't have a milestone edit command. Use the script.
 
 ```bash
-MS_ID=$(curl -s "$API/milestones?name=v1.0" -H "Authorization: token $TOKEN" | jq '.[0].id')
-
-# Update title
-curl -s -X PATCH "$API/milestones/$MS_ID" \
-  -H "Authorization: token $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"title": "v1.0.0"}'
-
-# Update deadline
-curl -s -X PATCH "$API/milestones/$MS_ID" \
-  -H "Authorization: token $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"due_on": "2025-06-15T00:00:00Z"}'
+scripts/tea-milestone-edit "v1.0" --title "v1.0.0"
+scripts/tea-milestone-edit "v1.0" --deadline "2025-06-15"
+scripts/tea-milestone-edit "v1.0" --description "Updated release notes"
 ```
 
 ## Bulk Assign Issues

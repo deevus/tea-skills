@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Manage issue comments via API
+# Usage: tea-issue-comment add <issue> <body>
+#        tea-issue-comment list <issue>
+#        tea-issue-comment edit <comment-id> <body>
+source "$(dirname "$0")/tea-api"
+
+action="${1:?Usage: tea-issue-comment <add|list|edit> <issue|comment-id> [body]}"
+
+case "$action" in
+  add)
+    issue="${2:?Usage: tea-issue-comment add <issue> <body>}"
+    body="${3:?Usage: tea-issue-comment add <issue> <body>}"
+    _api_post "issues/$issue/comments" "{\"body\": $(echo "$body" | jq -Rs .)}" | jq -r '"Comment #\(.id) added to issue #'"$issue"'"'
+    ;;
+  list)
+    issue="${2:?Usage: tea-issue-comment list <issue>}"
+    _api_get "issues/$issue/comments" | jq -r '.[] | "#\(.id) @\(.user.login): \(.body | split("\n")[0])"'
+    ;;
+  edit)
+    comment_id="${2:?Usage: tea-issue-comment edit <comment-id> <body>}"
+    body="${3:?Usage: tea-issue-comment edit <comment-id> <body>}"
+    _api_patch "issues/comments/$comment_id" "{\"body\": $(echo "$body" | jq -Rs .)}" | jq -r '"Comment #\(.id) updated"'
+    ;;
+  *) echo "Unknown action: $action (use add, list, or edit)" >&2; exit 1 ;;
+esac
