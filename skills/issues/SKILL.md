@@ -47,6 +47,12 @@ tea issues edit 42 --deadline "2025-06-01"
 tea issues edit 1 2 3 --add-labels "sprint-5" # edit multiple
 ```
 
+## Comment
+
+```bash
+tea comment 42 "This is a comment"
+```
+
 ## Close / Reopen
 
 ```bash

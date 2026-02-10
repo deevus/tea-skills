@@ -30,7 +30,7 @@ scripts/tea-issue-lock unlock 42
 ## Comments
 
 ```bash
-scripts/tea-issue-comment add 42 "This is a comment"
-scripts/tea-issue-comment list 42
-scripts/tea-issue-comment edit 123 "Updated comment"
+tea comment 42 "This is a comment"               # add (tea CLI)
+tea issues 42 --comments                          # list (tea CLI)
+scripts/tea-issue-comment edit 123 "Updated text" # edit (API only)
 ```
