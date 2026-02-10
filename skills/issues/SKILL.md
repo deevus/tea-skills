@@ -8,14 +8,14 @@ description: Manage Gitea/Forgejo issues using the tea CLI. Use when creating, e
 ## List
 
 ```bash
-tea issues list                                    # open issues (default)
-tea issues list --state all                        # include closed
-tea issues list --labels "bug,critical"            # by label
-tea issues list --milestones "v1.0"                # by milestone
+tea issues list -o simple                          # open issues, compact output (recommended)
+tea issues list --state all -o simple              # include closed
+tea issues list --labels "bug,critical" -o simple  # by label
+tea issues list --milestones "v1.0" -o simple      # by milestone
 tea issues list --assignee "user" --author "user"  # by person
 tea issues list --keyword "search term"            # text search
 tea issues list --from "2025-01-01" --until "2025-06-01"
-tea issues list --output json                      # json, yaml, csv, simple
+tea issues list --output json                      # use json only when parsing with jq
 tea issues list --fields "index,title,state,labels,assignees"
 tea issues list --page 2 --limit 50
 ```
@@ -56,7 +56,7 @@ tea issues reopen 42
 
 ## Tips
 
-- `--output json` + `jq` for scripting: `tea issues list --output json | jq -r '.[].index'`
+- Prefer `-o simple` for listing; use `--output json` only when parsing with `jq`
 - `--kind pulls` searches PRs with the same filters as issues
 - `--add-labels` / `--remove-labels` are additive/subtractive, not replacing
 

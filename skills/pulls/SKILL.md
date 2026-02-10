@@ -8,9 +8,9 @@ description: Manage Gitea/Forgejo pull requests using the tea CLI. Use when crea
 ## List
 
 ```bash
-tea pulls list                     # open PRs (default)
-tea pulls list --state all         # include closed/merged
-tea pulls list --output json       # for scripting
+tea pulls list -o simple           # open PRs, compact output (recommended)
+tea pulls list --state all -o simple  # include closed/merged
+tea pulls list --output json       # use json only when parsing with jq
 tea pulls list --fields "index,title,state,author,base,head,labels"
 ```
 

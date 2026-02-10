@@ -8,9 +8,9 @@ description: Manage Gitea/Forgejo milestones using the tea CLI. Use when creatin
 ## List
 
 ```bash
-tea milestones list                   # open (default)
-tea milestones list --state all       # include closed
-tea milestones list --output json
+tea milestones list -o simple         # open milestones, compact output (recommended)
+tea milestones list --state all -o simple  # include closed
+tea milestones list --output json     # use json only when parsing with jq
 tea milestones list --fields "title,state,items_open,items_closed,duedate,description"
 ```
 
@@ -39,7 +39,7 @@ tea milestones delete "v1.0"
 ## Manage Issues in Milestones
 
 ```bash
-tea milestones issues "v1.0"                              # list issues
+tea milestones issues "v1.0" -o simple                    # list issues (recommended)
 tea milestones issues "v1.0" --state all --kind issue     # filter by state/kind
 tea milestones issues "v1.0" --fields "index,title,state,assignees,labels"
 tea milestones issues add "v1.0" 42                       # assign issue

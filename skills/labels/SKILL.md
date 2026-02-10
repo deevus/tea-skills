@@ -8,8 +8,8 @@ description: Manage Gitea/Forgejo issue labels using the tea CLI. Use when creat
 ## List
 
 ```bash
-tea labels list                    # all labels
-tea labels list --output json      # for scripting
+tea labels list -o simple          # all labels, compact output (recommended)
+tea labels list --output json      # use json only when parsing with jq
 tea labels list --save             # export to file (tea internal format)
 ```
 
@@ -24,7 +24,7 @@ tea labels create --file labels.csv   # bulk import from file
 ## Update
 
 ```bash
-# Get label ID first
+# Get label ID (requires json for parsing)
 tea labels list --output json | jq '.[] | {id, name, color}'
 
 tea labels update --id 5 --name "bugfix" --color "#d73a4a"
