@@ -1,0 +1,10 @@
+{
+  "name": "tea-skills",
+  "description": "Skills for Gitea/Forgejo workflows using the tea CLI",
+  "version": "0.1.0",
+  "author": {
+    "name": "sh"
+  },
+  "license": "MIT",
+  "keywords": ["tea", "gitea", "forgejo", "cli", "issues", "pulls", "milestones"]
+}
