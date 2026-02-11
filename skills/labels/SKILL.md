@@ -1,9 +1,10 @@
 ---
 name: labels
-description: Manage Gitea/Forgejo issue labels using the tea CLI. Use when creating, updating, deleting, or bulk-managing labels.
+description: List, create, update, and delete Gitea/Forgejo issue labels.
+user-invokable: true
 ---
 
-# Tea Labels
+# Labels
 
 ## List
 
@@ -51,5 +52,3 @@ tea issues edit 42 --remove-labels "status:needs-triage"
 - Colors need `#` prefix (e.g., `#d73a4a`)
 - Names are case-sensitive
 - Deleting a label removes it from all issues/PRs
-
-For naming conventions, bulk export/import, and org-level labels (via `scripts/tea-label-org`), see `extras.md`.

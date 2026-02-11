@@ -8,17 +8,19 @@ A Claude Code **plugin** providing skills for Gitea/Forgejo workflows via the [t
 
 ## Architecture
 
-### Three-Layer Skill Design
+### Focused Single-File Skills
 
-Each skill (issues, pulls, labels, milestones) follows a consistent three-file pattern:
+Each skill lives in its own directory with a single `skills/<name>/SKILL.md` file. Skills are action-specific (e.g., `create-issue`, `merge-pull`) rather than domain-broad, keeping each skill focused and readable.
 
-1. **`skills/<name>/SKILL.md`** — Primary context loaded into Claude's prompt. Contains the core tea CLI commands for that domain. This is what Claude reads when the skill is invoked.
-2. **`skills/<name>/api.md`** (optional) — API-only features that tea CLI doesn't support, backed by scripts in `scripts/`.
-3. **`skills/<name>/extras.md`** — Bulk operations, workflow patterns, and advanced recipes.
+**Issues domain:** `list-issues`, `create-issue`, `edit-issues`, `close-issues`, `issue-comments`, `issue-dependencies`, `issue-moderation`
+**Pulls domain:** `list-pulls`, `create-pull`, `review-pull`, `merge-pull`, `close-pulls`
+**Milestones domain:** `milestones`, `milestone-issues`
+**Labels domain:** `labels`, `label-schemes`
+**API:** `using-the-tea-api`
 
 ### Slash Commands → Skills Routing
 
-`commands/*.md` files are thin stubs with YAML frontmatter. Each just tells Claude to invoke the corresponding `tea:<name>` skill. The actual content lives in `skills/`.
+`commands/*.md` files are thin stubs with YAML frontmatter including `allowed-tools` for tight Bash permissions. Each invokes its corresponding `tea:<name>` skill. The actual content lives in `skills/`.
 
 ### Scripts for API Gaps
 
@@ -48,10 +50,9 @@ Each skill (issues, pulls, labels, milestones) follows a consistent three-file p
 
 ## Adding a New Skill
 
-1. Create `skills/<name>/SKILL.md` with YAML frontmatter (`name`, `description`) and command reference
-2. Create `commands/<name>.md` stub that invokes `tea:<name>`
+1. Create `skills/<name>/SKILL.md` with YAML frontmatter (`name`, `description`, `user-invokable: true`) and command reference
+2. Create `commands/<name>.md` stub with `allowed-tools` that invokes `tea:<name>`
 3. Add API scripts to `scripts/` if needed (source `tea-api` for shared helpers)
-4. Add optional `api.md` and `extras.md` companion files
 
 ## Adding a New Script
 
