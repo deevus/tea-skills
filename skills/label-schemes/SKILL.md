@@ -1,4 +1,10 @@
-# Labels Extras
+---
+name: label-schemes
+description: Label naming conventions, color schemes, export/import, copy between repos, bulk operations, and org-level labels.
+user-invokable: true
+---
+
+# Label Schemes
 
 ## Naming Conventions
 

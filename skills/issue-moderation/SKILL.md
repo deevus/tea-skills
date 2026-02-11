@@ -1,6 +1,12 @@
-# Issues API
+---
+name: issue-moderation
+description: Pin, react to, and lock/unlock Gitea/Forgejo issues via API scripts.
+user-invokable: true
+---
 
-Features not available in `tea` CLI. Use scripts from `scripts/`.
+# Issue Moderation
+
+Features not available in the tea CLI. Use scripts from `scripts/`.
 
 ## Pin / Unpin
 
@@ -25,12 +31,4 @@ scripts/tea-issue-react list 42
 scripts/tea-issue-lock lock 42           # default reason: resolved
 scripts/tea-issue-lock lock 42 "spam"    # custom reason
 scripts/tea-issue-lock unlock 42
-```
-
-## Comments
-
-```bash
-tea comment 42 "This is a comment"               # add (tea CLI)
-tea issues 42 --comments                          # list (tea CLI)
-scripts/tea-issue-comment edit 123 "Updated text" # edit (API only)
 ```

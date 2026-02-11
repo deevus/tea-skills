@@ -1,16 +1,17 @@
 ---
 name: milestones
-description: Manage Gitea/Forgejo milestones using the tea CLI. Use when creating, closing, tracking, or assigning issues to milestones.
+description: List, show, create, close, reopen, delete, and edit Gitea/Forgejo milestones.
+user-invokable: true
 ---
 
-# Tea Milestones
+# Milestones
 
 ## List
 
 ```bash
-tea milestones list -o simple         # open milestones, compact output (recommended)
-tea milestones list --state all -o simple  # include closed
-tea milestones list --output json     # use json only when parsing with jq
+tea milestones list -o simple              # open milestones, compact output (recommended)
+tea milestones list --state all -o simple   # include closed
+tea milestones list --output json           # use json only when parsing with jq
 tea milestones list --fields "title,state,items_open,items_closed,duedate,description"
 ```
 
@@ -36,14 +37,14 @@ tea milestones reopen "v1.0"
 tea milestones delete "v1.0"
 ```
 
-## Manage Issues in Milestones
+## Edit (API)
+
+The tea CLI doesn't have a milestone edit command. Use the script:
 
 ```bash
-tea milestones issues "v1.0" -o simple                    # list issues (recommended)
-tea milestones issues "v1.0" --state all --kind issue     # filter by state/kind
-tea milestones issues "v1.0" --fields "index,title,state,assignees,labels"
-tea milestones issues add "v1.0" 42                       # assign issue
-tea milestones issues remove "v1.0" 42                    # unassign issue
+scripts/tea-milestone-edit "v1.0" --title "v1.0.0"
+scripts/tea-milestone-edit "v1.0" --deadline "2025-06-15"
+scripts/tea-milestone-edit "v1.0" --description "Updated release notes"
 ```
 
 ## Tips
@@ -51,5 +52,3 @@ tea milestones issues remove "v1.0" 42                    # unassign issue
 - Milestones are identified by name in CLI, by ID in the API
 - Deadlines accept date strings like `2025-06-01`
 - Deleting a milestone doesn't close its issues — they just become unassigned
-
-For editing milestones (via `scripts/tea-milestone-edit`), bulk assignment, progress tracking, and burndown, see `extras.md`.

@@ -35,10 +35,18 @@ if git rev-parse --is-inside-work-tree &>/dev/null; then
             login_name=$(echo "$remote_url" | sed -E 's|^(ssh\|https?)://([^@]*@)?||; s|^[^@]*@||; s|[:/].*||')
         fi
 
-        if [ -n "$login_name" ]; then
-            context_parts+=("WORKTREE DETECTED: tea CLI does not auto-detect logins in git worktrees. Append --login $login_name to all tea commands in this session.")
+        # Extract owner/repo from remote URL
+        repo_slug=""
+        if [ -n "$remote_url" ]; then
+            repo_slug=$(echo "$remote_url" | sed -E 's|^(ssh\|https?)://[^/]*/||; s|^[^:]*:||; s|\.git$||')
+        fi
+
+        if [ -n "$login_name" ] && [ -n "$repo_slug" ]; then
+            context_parts+=("WORKTREE DETECTED: tea CLI cannot auto-detect logins or repo context in git worktrees. Append --login $login_name --repo $repo_slug to all tea commands in this session.")
+        elif [ -n "$login_name" ]; then
+            context_parts+=("WORKTREE DETECTED: tea CLI cannot auto-detect logins or repo context in git worktrees. Append --login $login_name --repo <owner/repo> to all tea commands in this session.")
         else
-            context_parts+=("WORKTREE DETECTED: tea CLI does not auto-detect logins in git worktrees. Append --login <server> to all tea commands. Run tea login list to find the server name.")
+            context_parts+=("WORKTREE DETECTED: tea CLI cannot auto-detect logins or repo context in git worktrees. Append --login <server> --repo <owner/repo> to all tea commands. Run tea login list to find the server name.")
         fi
     fi
 fi

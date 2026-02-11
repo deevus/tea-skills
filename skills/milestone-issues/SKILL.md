@@ -1,16 +1,22 @@
-# Milestones Extras
+---
+name: milestone-issues
+description: Manage issues within Gitea/Forgejo milestones — list, add, remove, progress tracking, burndown, bulk assign, and move between milestones.
+user-invokable: true
+---
 
-## Edit Milestone (API)
+# Milestone Issues
 
-The `tea` CLI doesn't have a milestone edit command. Use the script.
+## List / Add / Remove
 
 ```bash
-scripts/tea-milestone-edit "v1.0" --title "v1.0.0"
-scripts/tea-milestone-edit "v1.0" --deadline "2025-06-15"
-scripts/tea-milestone-edit "v1.0" --description "Updated release notes"
+tea milestones issues "v1.0" -o simple                    # list issues (recommended)
+tea milestones issues "v1.0" --state all --kind issue      # filter by state/kind
+tea milestones issues "v1.0" --fields "index,title,state,assignees,labels"
+tea milestones issues add "v1.0" 42                        # assign issue
+tea milestones issues remove "v1.0" 42                     # unassign issue
 ```
 
-## Bulk Assign Issues
+## Bulk Assign
 
 ```bash
 # By label
