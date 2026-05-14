@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import tempfile
 import unittest
@@ -8,6 +9,9 @@ from unittest import mock
 from tests.e2e.harness.model import RunContext
 from tests.e2e.harness.scenarios import load_scenarios
 from tests.e2e.harness.template import render_template
+
+
+from tests.e2e import test_agent_e2e
 
 
 class HarnessUnitTests(unittest.TestCase):
@@ -153,6 +157,18 @@ class HarnessUnitTests(unittest.TestCase):
             self.assertIn("audit.jsonl", text)
             self.assertIn(str(spy.bin_dir), spy.path_prefix)
 
+
+
+    def test_e2e_run_root_defaults_to_repo_artifacts_dir(self):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            run_root = test_agent_e2e.e2e_run_root("abc123")
+        self.assertEqual(run_root, test_agent_e2e.ROOT / ".e2e-artifacts" / "abc123")
+
+    def test_e2e_run_root_uses_env_artifact_dir(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch.dict(os.environ, {"TEA_SKILLS_E2E_ARTIFACT_DIR": tmp}, clear=True):
+                run_root = test_agent_e2e.e2e_run_root("abc123")
+        self.assertEqual(run_root, Path(tmp) / "abc123")
     def test_claude_trace_parser_extracts_skill_loaded_events(self):
         from tests.e2e.harness.agents.claude_code import parse_claude_stream_json
 

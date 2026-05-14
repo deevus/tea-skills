@@ -66,13 +66,19 @@ Run the live create-issue agent E2E scenario:
 TEA_SKILLS_E2E=1 python -m unittest tests.e2e.test_agent_e2e -v
 ```
 
+Live run artifacts are stored under `.e2e-artifacts/<run-id>/` by default. Override the artifact directory:
+
+```bash
+TEA_SKILLS_E2E=1 TEA_SKILLS_E2E_ARTIFACT_DIR=/tmp/tea-skills-e2e python -m unittest tests.e2e.test_agent_e2e -v
+```
+
 Preserve the disposable remote resources for debugging:
 
 ```bash
 TEA_SKILLS_E2E=1 TEA_SKILLS_E2E_KEEP_REMOTE=1 python -m unittest tests.e2e.test_agent_e2e -v
 ```
 
-The harness records agent traces, `tea` calls, and bundled action calls under the run artifact directory, then verifies Forgejo state against the live server. Scenario prompts do not mention skills, `tea`, bundled actions, or forbidden alternatives; skill discovery is part of what the test verifies.
+The harness records agent traces, `tea` calls, and bundled action calls under the run artifact directory, then verifies Forgejo state against the live server. Failure messages include the scenario artifact path. Scenario prompts do not mention skills, `tea`, bundled actions, or forbidden alternatives; skill discovery is part of what the test verifies.
 
 ## Installation
 
