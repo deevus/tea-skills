@@ -271,6 +271,66 @@ class HarnessUnitTests(unittest.TestCase):
             skills = [event.name for event in result.trace_events if event.kind == "skill.loaded"]
             self.assertIn("create-issue", skills)
 
+    def test_pi_trace_parser_extracts_skill_loaded_from_current_skill_read(self):
+        from tests.e2e.harness.agents.pi import parse_pi_json_events
+
+        lines = [
+            json.dumps({
+                "type": "tool_execution_start",
+                "toolName": "read",
+                "args": {"path": "/repo/skills/create-issue/SKILL.md"},
+            }),
+            json.dumps({
+                "type": "message_update",
+                "assistantMessageEvent": {"type": "text_delta", "delta": "Using create-issue"},
+            }),
+        ]
+        events = parse_pi_json_events(lines, skills_dir=Path("/repo/skills"))
+        skills = [event.name for event in events if event.kind == "skill.loaded"]
+        self.assertEqual(skills, ["create-issue"])
+
+    def test_pi_trace_parser_ignores_skill_reads_outside_current_checkout(self):
+        from tests.e2e.harness.agents.pi import parse_pi_json_events
+
+        lines = [
+            json.dumps({
+                "type": "tool_execution_start",
+                "toolName": "read",
+                "args": {"path": "/old/global/skills/create-issue/SKILL.md"},
+            }),
+        ]
+        events = parse_pi_json_events(lines, skills_dir=Path("/repo/skills"))
+        self.assertEqual([event for event in events if event.kind == "skill.loaded"], [])
+
+    def test_pi_adapter_command_uses_only_current_repo_skills(self):
+        from tests.e2e.harness.agents.pi import PiAdapter
+
+        captured: dict[str, list[str]] = {}
+
+        def fake_run(command, **kwargs):
+            captured["command"] = command
+            return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            skills = root / "repo" / "skills"
+            skills.mkdir(parents=True)
+            with mock.patch("tests.e2e.harness.agents.pi.subprocess.run", side_effect=fake_run):
+                PiAdapter(pi_bin="pi", skills_dir=skills).run(
+                    "hello",
+                    workspace=root,
+                    artifact_dir=root / "artifacts",
+                    env={},
+                    timeout_seconds=5,
+                )
+
+        command = captured["command"]
+        self.assertIn("--print", command)
+        self.assertEqual(command[command.index("--mode") + 1], "json")
+        self.assertIn("--no-session", command)
+        self.assertIn("--no-skills", command)
+        self.assertEqual(command[command.index("--skill") + 1], str(skills))
+
 
 if __name__ == "__main__":
     unittest.main()
