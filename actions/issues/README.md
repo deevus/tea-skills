@@ -17,7 +17,7 @@ Use bundled actions only for Gitea/Forgejo issue features that `tea` does not ex
 ## Comment edit
 
 ```bash
-actions/issues/comment-edit <comment-id> <body>
+actions/issues/comment-edit.py <comment-id> <body>
 ```
 
 Edits an existing issue comment. Add and list comments with `tea comment` and `tea issues <issue> --comments`.
@@ -25,8 +25,8 @@ Edits an existing issue comment. Add and list comments with `tea comment` and `t
 ## Locking
 
 ```bash
-actions/issues/lock <issue> [reason]
-actions/issues/unlock <issue>
+actions/issues/lock.py <issue> [reason]
+actions/issues/unlock.py <issue>
 ```
 
 Default lock reason is `resolved`.
@@ -34,15 +34,15 @@ Default lock reason is `resolved`.
 ## Pinning
 
 ```bash
-actions/issues/pin <issue>
-actions/issues/unpin <issue>
+actions/issues/pin.py <issue>
+actions/issues/unpin.py <issue>
 ```
 
 ## Reactions
 
 ```bash
-actions/issues/reaction-add <issue> <reaction>
-actions/issues/reaction-list <issue>
+actions/issues/reaction-add.py <issue> <reaction>
+actions/issues/reaction-list.py <issue>
 ```
 
 Common reactions: `+1`, `-1`, `laugh`, `confused`, `heart`, `hooray`, `rocket`, `eyes`.
@@ -52,10 +52,10 @@ Common reactions: `+1`, `-1`, `laugh`, `confused`, `heart`, `hooray`, `rocket`, 
 “A depends on B” means B blocks A.
 
 ```bash
-actions/issues/dependency-add <issue> <depends-on>
-actions/issues/dependency-remove <issue> <depends-on>
-actions/issues/dependency-list <issue>
-actions/issues/dependency-all
-actions/issues/dependency-ready
-actions/issues/dependency-graph
+actions/issues/dependency-add.py <issue> <depends-on>
+actions/issues/dependency-remove.py <issue> <depends-on>
+actions/issues/dependency-list.py <issue>
+actions/issues/dependency-all.py
+actions/issues/dependency-ready.py
+actions/issues/dependency-graph.py
 ```

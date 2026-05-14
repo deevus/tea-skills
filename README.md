@@ -34,7 +34,7 @@ Skill docs use `actions/<domain>/<action>` as a bundled plugin resource path. It
 When executing from another project, resolve the action to the installed plugin root and run that absolute path while keeping the working directory in the target repository:
 
 ```bash
-/path/to/tea-skills/actions/issues/dependency-ready
+/path/to/tea-skills/actions/issues/dependency-ready.py
 ```
 
 Do not require users to `cd` into this plugin or add `actions/` to `PATH`. Actions intentionally run from the target repository because the private Adapter derives owner and repo from that repository's git remote.

@@ -21,8 +21,8 @@ Use bundled actions only for pull request features that `tea` does not expose cl
 ## Set auto-merge
 
 ```bash
-actions/pull-requests/set-automerge <pr> --enable [--style squash|merge|rebase] [--message "message"]
-actions/pull-requests/set-automerge <pr> --cancel
+actions/pull-requests/set-automerge.py <pr> --enable [--style squash|merge|rebase] [--message "message"]
+actions/pull-requests/set-automerge.py <pr> --cancel
 ```
 
 This configures auto-merge. It does not merge the pull request immediately.

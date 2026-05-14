@@ -17,7 +17,7 @@ Use bundled actions only for milestone features that `tea` does not expose clean
 ## Edit milestone
 
 ```bash
-actions/milestones/edit <milestone-name> [--title <title>] [--deadline YYYY-MM-DD] [--description <text>]
+actions/milestones/edit.py <milestone-name> [--title <title>] [--deadline YYYY-MM-DD] [--description <text>]
 ```
 
 Milestones are identified by name in `tea`, but by ID in the Gitea/Forgejo API. This action looks up the ID before editing.

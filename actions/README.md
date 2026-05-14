@@ -7,7 +7,7 @@ Action paths are relative to this installed plugin root. When executing an actio
 Example:
 
 ```bash
-/path/to/tea-skills/actions/issues/dependency-ready
+/path/to/tea-skills/actions/issues/dependency-ready.py
 ```
 
 The action derives owner and repo from the target repository's `origin` remote.

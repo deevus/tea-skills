@@ -14,11 +14,11 @@ Use bundled actions for organization-level labels.
 ## List organization labels
 
 ```bash
-actions/org-labels/list
+actions/org-labels/list.py
 ```
 
 ## Create organization label
 
 ```bash
-actions/org-labels/create <name> <color> [description]
+actions/org-labels/create.py <name> <color> [description]
 ```
