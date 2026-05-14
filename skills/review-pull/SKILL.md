@@ -6,7 +6,7 @@ user-invokable: true
 
 # Review Pull Request
 
-Script paths in this skill follow the bundled-script convention: `scripts/<name>` means the script bundled with this plugin. Resolve it to the installed plugin path before executing from a project repo.
+Prefer `tea pulls` commands for review workflows. Bundled actions are only for CLI gaps and are documented under `actions/pull-requests/README.md`.
 
 ## Checkout and Review
 
@@ -17,31 +17,26 @@ tea pulls approve 15       # approve
 tea pulls reject 15        # request changes
 ```
 
-## Request Reviewers (API)
+## Request Reviewers
 
 ```bash
-scripts/tea-pr-reviewers add 15 "user1,user2"
-scripts/tea-pr-reviewers remove 15 "user1"
+tea pulls edit 15 --add-reviewers user1,user2
+tea pulls edit 15 --remove-reviewers user1
 ```
 
-## Diff / Patch / Files (API)
+## Diff / Patch / Review Comments
 
 ```bash
-source scripts/tea-api
-_api_get "pulls/15.diff"
-_api_get "pulls/15.patch"
-_api_get "pulls/15/files" | jq '.[].filename'
+tea pulls 15 --fields diff,patch
+tea pulls review-comments 15
+tea pulls resolve 123
+tea pulls unresolve 123
 ```
 
-## Reviews with Inline Comments (API)
+For interactive inline review, use:
 
 ```bash
-source scripts/tea-api
-_api_post "pulls/15/reviews" '{
-  "event": "REQUEST_CHANGES",
-  "body": "Please fix the noted issues",
-  "comments": [{"path": "src/auth.go", "new_position": 15, "body": "Validate token expiry"}]
-}'
+tea pulls review 15
 ```
 
 ## Review Checklist Pattern

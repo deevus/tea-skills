@@ -6,8 +6,6 @@ user-invokable: true
 
 # Label Schemes
 
-Script paths in this skill follow the bundled-script convention: `scripts/<name>` means the script bundled with this plugin. Resolve it to the installed plugin path before executing from a project repo.
-
 ## Naming Conventions
 
 Consistent prefixes make labels scannable and filterable.
@@ -40,41 +38,14 @@ tea labels create --name "scope:api" --color "#d4c5f9"
 ## Export / Import
 
 ```bash
-# Export to JSON
 tea labels list --output json > labels.json
-
-# Export to CSV
-tea labels list --output json | jq -r '.[] | [.name, .color, .description] | @csv' > labels.csv
-
-# Import from tea file
 tea labels create --file labels.csv
-
-# Copy between repos
-tea labels list -r owner/source-repo --output json | \
-  jq -r '.[] | "tea labels create -r owner/target-repo --name \"\(.name)\" --color \"\(.color)\" --description \"\(.description // "")\""' | sh
 ```
 
 ## Bulk Operations
 
-```bash
-# Delete all labels
-tea labels list --output json | jq -r '.[].id' | xargs -I{} tea labels delete {}
-
-# Rename prefix (e.g., kind: -> type:)
-tea labels list --output json | \
-  jq -r '.[] | select(.name | startswith("kind:")) | "\(.id) \(.name)"' | \
-  while read id name; do
-    tea labels update --id "$id" --name "$(echo "$name" | sed 's/^kind:/type:/')"
-  done
-
-# Bulk add label to issues
-tea issues list --labels "type:bug" --state open --output json | \
-  jq -r '.[].index' | xargs -I{} tea issues edit {} --add-labels "sprint:current"
-```
+Use `tea labels list --output json` when parsing is necessary, then apply `tea labels update`, `tea labels delete`, or `tea issues edit` to the selected IDs/issues.
 
 ## Organization-Level Labels
 
-```bash
-scripts/tea-label-org list
-scripts/tea-label-org create "org:team-a" "#0052cc" "Owned by Team A"
-```
+For organization-level label actions, see `actions/org-labels/README.md`.
