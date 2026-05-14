@@ -17,6 +17,12 @@ def _render_data(value: Any, data: dict[str, Any]) -> Any:
     return value
 
 
+def _skill_name_matches(actual: str | None, expected: str) -> bool:
+    if actual is None:
+        return False
+    return actual == expected or actual.endswith(f":{expected}")
+
+
 class ScenarioRunner:
     def __init__(
         self,
@@ -32,7 +38,7 @@ class ScenarioRunner:
         for expected in scenario.expect_trace.get("events", []):
             if expected.get("kind") == "skill.loaded":
                 name = expected["name"]
-                if not any(event.kind == "skill.loaded" and event.name == name for event in trace_events):
+                if not any(event.kind == "skill.loaded" and _skill_name_matches(event.name, name) for event in trace_events):
                     return f"expected skill to load: {name}"
         return None
 
