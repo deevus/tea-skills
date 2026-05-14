@@ -351,3 +351,7 @@ These are intentionally left to the implementation plan:
 - Whether the default isolation mode is one org/repo per suite, per domain, or per scenario.
 - The exact scenario inventory for each current skill.
 - The exact Forgejo API helper used by the verifier.
+
+## Implemented vertical slice
+
+The first implementation pass builds a single live create-issue scenario to prove the full harness contract. It intentionally uses stdlib `unittest` as the dependency-free host while remaining pytest-collectable. Full representative scenarios for every skill should be added in a follow-up plan once the vertical slice is stable against the target Forgejo server and selected agent adapter.

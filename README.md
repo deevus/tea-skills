@@ -44,6 +44,36 @@ Do not require users to `cd` into this plugin or add `actions/` to `PATH`. Actio
 - [tea CLI](https://gitea.com/gitea/tea) configured with `tea login`
 - Python 3
 
+## Opt-in live agent E2E tests
+
+The repository includes an opt-in harness that runs a real agent against a real Forgejo server using disposable `tea-e2e-*` organizations and repositories.
+
+Requirements:
+
+- `tea` is installed and already logged in to a Forgejo/Gitea server.
+- The logged-in account can create and delete organizations and repositories.
+- Claude Code is installed and authenticated.
+
+Run the non-live tests:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+Run the live create-issue agent E2E scenario:
+
+```bash
+TEA_SKILLS_E2E=1 python -m unittest tests.e2e.test_agent_e2e -v
+```
+
+Preserve the disposable remote resources for debugging:
+
+```bash
+TEA_SKILLS_E2E=1 TEA_SKILLS_E2E_KEEP_REMOTE=1 python -m unittest tests.e2e.test_agent_e2e -v
+```
+
+The harness records agent traces, `tea` calls, bundled action calls, and Forgejo state snapshots under the run artifact directory. Scenario prompts do not mention skills, `tea`, bundled actions, or forbidden alternatives; skill discovery is part of what the test verifies.
+
 ## Installation
 
 Install as a Claude Code plugin:
