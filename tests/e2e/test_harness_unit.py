@@ -82,6 +82,27 @@ class HarnessUnitTests(unittest.TestCase):
         self.assertEqual(event.root, "tea.issues.create")
         self.assertTrue(event.mutates)
 
+    def test_normalize_tea_event_handles_common_alias_and_option_forms(self):
+        from tests.e2e.suites.tea.normalize import normalize_raw_audit_event
+
+        cases = [
+            (["issues", "-R", "origin", "create"], "tea.issues.create"),
+            (["issues", "--state", "all", "create"], "tea.issues.create"),
+            (["i", "c"], "tea.issues.create"),
+            (["pr", "c"], "tea.pulls.create"),
+            (["pulls", "m", "15"], "tea.pulls.merge"),
+        ]
+        for argv, root in cases:
+            with self.subTest(argv=argv):
+                event = normalize_raw_audit_event({
+                    "source": "tea",
+                    "argv": argv,
+                    "cwd": "/repo",
+                    "exit_code": 0,
+                })
+                self.assertEqual(event.root, root)
+                self.assertTrue(event.mutates)
+
     def test_normalize_action_event_uses_action_path(self):
         from tests.e2e.suites.tea.normalize import normalize_raw_audit_event
 

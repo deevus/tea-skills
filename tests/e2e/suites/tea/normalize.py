@@ -11,13 +11,20 @@ _MUTATING_ACTION_WORDS = {
     "add", "remove", "edit", "lock", "unlock", "pin", "unpin", "create", "set", "cancel"
 }
 _TEA_VALUE_OPTIONS = {
-    "--login", "--remote", "--repo", "--output", "-o", "-r",
+    "--add-assignees", "--add-labels", "--assignee", "--assignees", "--author", "--base", "--body",
+    "--deadline", "--description", "--fields", "--head", "--keyword", "--kind", "--labels", "--login",
+    "--milestone", "--milestones", "--output", "--remote", "--remove-assignees", "--remove-labels",
+    "--repo", "--state", "--title", "-R", "-o", "-r",
 }
 _TEA_COMMAND_ALIASES = {
+    "i": "issues",
     "issue": "issues",
+    "pr": "pulls",
+    "pull": "pulls",
 }
 _TEA_VERB_ALIASES = {
     "c": "create",
+    "m": "merge",
 }
 
 
