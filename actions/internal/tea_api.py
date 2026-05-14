@@ -297,6 +297,7 @@ class GiteaAdapter:
                 raw = response.read()
         except HTTPError as exc:
             raw_body = exc.read().decode("utf-8", errors="replace") if exc.fp else ""
+            exc.close()
             raise ApiError(method, url, exc.code, raw_body) from exc
         except URLError as exc:
             raise ApiError(method, url, None, str(exc.reason)) from exc
