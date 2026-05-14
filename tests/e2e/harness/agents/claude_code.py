@@ -24,6 +24,14 @@ def _extract_texts(obj: object) -> Iterable[str]:
             yield from _extract_texts(item)
 
 
+def _decode_subprocess_output(output: str | bytes | None) -> str:
+    if isinstance(output, str):
+        return output
+    if isinstance(output, bytes):
+        return output.decode("utf-8", errors="replace")
+    return ""
+
+
 def parse_claude_stream_json(lines: list[str]) -> list[TraceEvent]:
     events: list[TraceEvent] = []
     seen_skills: set[str] = set()
@@ -99,13 +107,13 @@ class ClaudeCodeAdapter:
                 check=False,
             )
             timed_out = False
-            stdout = completed.stdout
-            stderr = completed.stderr
+            stdout = _decode_subprocess_output(completed.stdout)
+            stderr = _decode_subprocess_output(completed.stderr)
             exit_code = completed.returncode
         except subprocess.TimeoutExpired as exc:
             timed_out = True
-            stdout = exc.stdout if isinstance(exc.stdout, str) else ""
-            stderr = exc.stderr if isinstance(exc.stderr, str) else ""
+            stdout = _decode_subprocess_output(exc.stdout)
+            stderr = _decode_subprocess_output(exc.stderr)
             exit_code = 124
 
         stdout_path.write_text(stdout, encoding="utf-8")
