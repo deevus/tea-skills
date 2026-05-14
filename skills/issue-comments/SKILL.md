@@ -6,8 +6,6 @@ user-invokable: true
 
 # Issue Comments
 
-Script paths in this skill follow the bundled-script convention: `scripts/<name>` means the script bundled with this plugin. Resolve it to the installed plugin path before executing from a project repo.
-
 ## Add Comment
 
 ```bash
@@ -20,12 +18,8 @@ tea comment 42 "This is a comment"
 tea issues 42 --comments
 ```
 
-## Edit Comment (API)
+## Edit Comment
 
-The tea CLI can't edit comments. Use the API script:
+The tea CLI can't edit comments. For the bundled action, see `actions/issues/README.md`.
 
-```bash
-scripts/tea-issue-comment edit 123 "Updated text"
-```
-
-The comment ID (123) can be found in the JSON output of `tea issues <num> --comments` or via the API.
+The comment ID can be found in the JSON output of `tea issues <num> --comments` or via Forgejo/Gitea UI/API details.

@@ -1,12 +1,12 @@
 ---
 name: create-pull
-description: Create Gitea/Forgejo pull requests — interactive, with flags, from forks, draft PRs, and quick patterns.
+description: Create Gitea/Forgejo pull requests — interactive, with flags, from forks, WIP conventions, and quick patterns.
 user-invokable: true
 ---
 
 # Create Pull Request
 
-Script paths in this skill follow the bundled-script convention: `scripts/<name>` means the script bundled with this plugin. Resolve it to the installed plugin path before executing from a project repo.
+Use `tea pulls create` for pull request creation. Bundled actions are only for CLI gaps and are documented under `actions/pull-requests/README.md`.
 
 ## Create
 
@@ -18,11 +18,13 @@ tea pulls create --title "Add auth" --description "Implements JWT" \
 tea pulls create --head "contributor:feature-branch" --base "main"  # from fork
 ```
 
-## Draft PR (API)
+## WIP PR Convention
+
+Use the normal tea CLI and prefix the title with `WIP:` when a Forgejo/Gitea workflow treats WIP titles as draft-like pull requests.
 
 ```bash
-scripts/tea-pr-draft create "WIP: Feature" feature-branch         # draft to main
-scripts/tea-pr-draft create "WIP: Feature" feature-branch develop  # draft to develop
+tea pulls create --title "WIP: Feature" --head feature-branch
+tea pulls create --title "WIP: Feature" --head feature-branch --base develop
 ```
 
 ## Quick Pattern

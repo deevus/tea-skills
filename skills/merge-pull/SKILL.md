@@ -1,12 +1,12 @@
 ---
 name: merge-pull
-description: Merge Gitea/Forgejo pull requests — all merge styles, auto-merge, mark draft ready, and branch cleanup.
+description: Merge Gitea/Forgejo pull requests — all merge styles, auto-merge, mark WIP ready, and branch cleanup.
 user-invokable: true
 ---
 
 # Merge Pull Request
 
-Script paths in this skill follow the bundled-script convention: `scripts/<name>` means the script bundled with this plugin. Resolve it to the installed plugin path before executing from a project repo.
+Prefer `tea pulls` commands for merge workflows. Bundled actions are only for CLI gaps and are documented under `actions/pull-requests/README.md`.
 
 ## Merge
 
@@ -18,19 +18,16 @@ tea pulls merge 15 --style rebase-merge # rebase + merge commit
 tea pulls merge 15 --style squash --title "feat: add auth" --message "Details"
 ```
 
-## Auto-Merge (API)
+## Auto-Merge
+
+The tea CLI does not expose auto-merge configuration. For the bundled action, see `actions/pull-requests/README.md`.
+
+## Mark WIP Ready
+
+If this repository uses `WIP:` titles as draft-like pull requests, remove the prefix with tea:
 
 ```bash
-scripts/tea-pr-automerge enable 15                          # squash (default)
-scripts/tea-pr-automerge enable 15 merge                    # merge commit
-scripts/tea-pr-automerge enable 15 squash "feat: add auth"  # with message
-scripts/tea-pr-automerge cancel 15
-```
-
-## Mark Draft Ready (API)
-
-```bash
-scripts/tea-pr-draft ready 15
+tea pulls edit 15 --title "Feature"
 ```
 
 ## Branch Cleanup

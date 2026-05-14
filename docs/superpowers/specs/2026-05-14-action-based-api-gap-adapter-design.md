@@ -128,38 +128,38 @@ Keep bundled actions only for workflows where `tea` is insufficient.
 Issue actions:
 
 ```text
-actions/issues/comment-edit
-actions/issues/lock
-actions/issues/unlock
-actions/issues/pin
-actions/issues/unpin
-actions/issues/reaction-add
-actions/issues/reaction-list
-actions/issues/dependency-add
-actions/issues/dependency-remove
-actions/issues/dependency-list
-actions/issues/dependency-all
-actions/issues/dependency-ready
-actions/issues/dependency-graph
+actions/issues/comment-edit.py
+actions/issues/lock.py
+actions/issues/unlock.py
+actions/issues/pin.py
+actions/issues/unpin.py
+actions/issues/reaction-add.py
+actions/issues/reaction-list.py
+actions/issues/dependency-add.py
+actions/issues/dependency-remove.py
+actions/issues/dependency-list.py
+actions/issues/dependency-all.py
+actions/issues/dependency-ready.py
+actions/issues/dependency-graph.py
 ```
 
 Pull request actions:
 
 ```text
-actions/pull-requests/set-automerge
+actions/pull-requests/set-automerge.py
 ```
 
 Milestone actions:
 
 ```text
-actions/milestones/edit
+actions/milestones/edit.py
 ```
 
 Org label actions:
 
 ```text
-actions/org-labels/list
-actions/org-labels/create
+actions/org-labels/list.py
+actions/org-labels/create.py
 ```
 
 ### Remove instead of migrate
@@ -179,7 +179,7 @@ The current raw `_api_get` / `_api_post` examples in pull request review docs sh
 - Resolve/unresolve: use `tea pulls resolve` / `tea pulls unresolve`.
 - Approve/reject/review: use `tea pulls approve`, `tea pulls reject`, and `tea pulls review`.
 
-No `actions/pull-requests/review-submit` action is included in this design.
+No `actions/pull-requests/review-submit.py` action is included in this design.
 
 ## Internal Adapter
 

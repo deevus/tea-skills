@@ -1,6 +1,6 @@
 # Use action-specific bundled actions
 
-Bundled plugin actions will be named and organized by the exact missing capability they provide, such as `actions/milestones/edit`, rather than broad domain commands with subcommands. This favors an honest Interface for agents: seeing an action path should not imply broader coverage than the Implementation actually supports.
+Bundled plugin actions will be named and organized by the exact missing capability they provide, such as `actions/milestones/edit.py`, rather than broad domain commands with subcommands. This favors an honest Interface for agents: seeing an action path should not imply broader coverage than the Implementation actually supports.
 
 ## Considered Options
 
