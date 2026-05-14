@@ -72,7 +72,7 @@ Preserve the disposable remote resources for debugging:
 TEA_SKILLS_E2E=1 TEA_SKILLS_E2E_KEEP_REMOTE=1 python -m unittest tests.e2e.test_agent_e2e -v
 ```
 
-The harness records agent traces, `tea` calls, bundled action calls, and Forgejo state snapshots under the run artifact directory. Scenario prompts do not mention skills, `tea`, bundled actions, or forbidden alternatives; skill discovery is part of what the test verifies.
+The harness records agent traces, `tea` calls, and bundled action calls under the run artifact directory, then verifies Forgejo state against the live server. Scenario prompts do not mention skills, `tea`, bundled actions, or forbidden alternatives; skill discovery is part of what the test verifies.
 
 ## Installation
 
