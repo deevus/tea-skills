@@ -331,6 +331,30 @@ class HarnessUnitTests(unittest.TestCase):
         self.assertIn("--no-skills", command)
         self.assertEqual(command[command.index("--skill") + 1], str(skills))
 
+    def test_cleanup_guard_accepts_only_current_run_resources(self):
+        from tests.e2e.suites.tea.provision import assert_safe_e2e_resource
+
+        assert_safe_e2e_resource("tea-e2e-abc123", "abc123")
+        with self.assertRaisesRegex(ValueError, "refusing"):
+            assert_safe_e2e_resource("production", "abc123")
+
+    def test_issue_verifier_matches_title_and_body_file(self):
+        from tests.e2e.harness.model import RunContext
+        from tests.e2e.suites.tea.verify_forgejo import verify_issue_expectation
+
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            (workspace / "issue-body.md").write_text("body marker", encoding="utf-8")
+            ctx = RunContext("run", "org", "repo", workspace)
+            issues = [{"number": 1, "title": "Title", "body": "body marker", "state": "open", "labels": []}]
+            result = verify_issue_expectation(
+                {"id": "main", "match": {"title": "Title"}, "assert": {"count": 1, "state": "open", "body_equals_file": "issue-body.md"}},
+                ctx,
+                issues,
+            )
+            self.assertTrue(result["passed"])
+            self.assertEqual(ctx.state["main"]["number"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()
