@@ -25,8 +25,12 @@ def verify_issue_expectation(expectation: dict[str, Any], ctx: RunContext, issue
         candidates = [issue for issue in candidates if issue.get("title") == match["title"]]
 
     expected_count = assertions.get("count")
-    if expected_count is not None and len(candidates) != int(expected_count):
-        return {"passed": False, "message": f"expected {expected_count} issue(s), found {len(candidates)}"}
+    if expected_count is not None:
+        expected_count_int = int(expected_count)
+        if len(candidates) != expected_count_int:
+            return {"passed": False, "message": f"expected {expected_count} issue(s), found {len(candidates)}"}
+        if expected_count_int == 0:
+            return {"passed": True, "message": ""}
     if not candidates:
         return {"passed": False, "message": "no matching issue found"}
 

@@ -337,6 +337,8 @@ class HarnessUnitTests(unittest.TestCase):
         assert_safe_e2e_resource("tea-e2e-abc123", "abc123")
         with self.assertRaisesRegex(ValueError, "refusing"):
             assert_safe_e2e_resource("production", "abc123")
+        with self.assertRaisesRegex(ValueError, "refusing"):
+            assert_safe_e2e_resource("tea-e2e-other", "abc123")
 
     def test_issue_verifier_matches_title_and_body_file(self):
         from tests.e2e.harness.model import RunContext
@@ -354,6 +356,20 @@ class HarnessUnitTests(unittest.TestCase):
             )
             self.assertTrue(result["passed"])
             self.assertEqual(ctx.state["main"]["number"], 1)
+
+
+    def test_issue_verifier_supports_zero_count_assertion(self):
+        from tests.e2e.harness.model import RunContext
+        from tests.e2e.suites.tea.verify_forgejo import verify_issue_expectation
+
+        with tempfile.TemporaryDirectory() as tmp:
+            ctx = RunContext("run", "org", "repo", Path(tmp))
+            result = verify_issue_expectation(
+                {"match": {"title": "Missing"}, "assert": {"count": 0}},
+                ctx,
+                [{"number": 1, "title": "Present", "body": "", "state": "open", "labels": []}],
+            )
+            self.assertTrue(result["passed"])
 
 
 if __name__ == "__main__":
