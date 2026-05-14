@@ -6,6 +6,8 @@ user-invokable: true
 
 # Merge Pull Request
 
+Script paths in this skill follow the bundled-script convention: `scripts/<name>` means the script bundled with this plugin. Resolve it to the installed plugin path before executing from a project repo.
+
 ## Merge
 
 ```bash

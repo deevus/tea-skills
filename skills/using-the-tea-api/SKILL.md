@@ -8,6 +8,8 @@ user-invokable: true
 
 Direct Gitea/Forgejo API access for anything the tea CLI or existing scripts don't cover.
 
+Script paths in this skill follow the bundled-script convention: `scripts/<name>` means the script bundled with this plugin. Resolve it to the installed plugin path before sourcing or executing from a project repo.
+
 ## Setup
 
 ```bash

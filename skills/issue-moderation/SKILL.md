@@ -6,7 +6,9 @@ user-invokable: true
 
 # Issue Moderation
 
-Features not available in the tea CLI. Use scripts from `scripts/`.
+Script paths in this skill follow the bundled-script convention: `scripts/<name>` means the script bundled with this plugin. Resolve it to the installed plugin path before executing from a project repo.
+
+Features not available in the tea CLI. Use the bundled scripts from `scripts/`.
 
 ## Pin / Unpin
 

@@ -6,6 +6,8 @@ user-invokable: true
 
 # Issue Dependencies
 
+Script paths in this skill follow the bundled-script convention: `scripts/<name>` means the script bundled with this plugin. Resolve it to the installed plugin path before executing from a project repo.
+
 "A depends on B" means B must be done first. B *blocks* A. The tea CLI has no dependency support — use `scripts/tea-dep`.
 
 ## Commands
