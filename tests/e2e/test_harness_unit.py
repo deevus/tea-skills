@@ -340,6 +340,61 @@ class HarnessUnitTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "refusing"):
             assert_safe_e2e_resource("tea-e2e-other", "abc123")
 
+
+    def test_create_org_and_repo_writes_local_context_without_pushing(self):
+        from actions.internal.tea_api import TeaConfig
+        from tests.e2e.suites.tea import provision
+
+        api_calls = []
+        git_calls = []
+
+        def fake_api(config, method, endpoint, body=None):
+            api_calls.append((method, endpoint))
+            if method == "POST" and endpoint.endswith("/repos"):
+                return {"clone_url": "https://example.test/org/repo.git"}
+            return {}
+
+        def fake_run(command, **kwargs):
+            git_calls.append(command)
+            if command[:2] == ["git", "clone"]:
+                Path(command[3]).mkdir(parents=True)
+            return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch("tests.e2e.suites.tea.provision.read_tea_config", return_value=TeaConfig("token", "https://forgejo.test")), \
+                 mock.patch("tests.e2e.suites.tea.provision.api_request", side_effect=fake_api), \
+                 mock.patch("tests.e2e.suites.tea.provision.subprocess.run", side_effect=fake_run):
+                run = provision.create_org_and_repo(Path(tmp), "abc123")
+                self.assertEqual(run.org, "tea-e2e-abc123")
+                self.assertTrue((run.workspace / "AGENTS.md").exists())
+                self.assertEqual(git_calls, [["git", "clone", "https://example.test/org/repo.git", str(run.workspace)]])
+                self.assertNotIn(("DELETE", "repos/tea-e2e-abc123/repo"), api_calls)
+
+    def test_create_org_and_repo_cleans_remote_if_clone_fails(self):
+        from actions.internal.tea_api import TeaConfig
+        from tests.e2e.suites.tea import provision
+
+        api_calls = []
+
+        def fake_api(config, method, endpoint, body=None):
+            api_calls.append((method, endpoint))
+            if method == "POST" and endpoint.endswith("/repos"):
+                return {"clone_url": "https://example.test/org/repo.git"}
+            return {}
+
+        def fake_run(command, **kwargs):
+            raise subprocess.CalledProcessError(128, command)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch("tests.e2e.suites.tea.provision.read_tea_config", return_value=TeaConfig("token", "https://forgejo.test")), \
+                 mock.patch("tests.e2e.suites.tea.provision.api_request", side_effect=fake_api), \
+                 mock.patch("tests.e2e.suites.tea.provision.subprocess.run", side_effect=fake_run):
+                with self.assertRaises(subprocess.CalledProcessError):
+                    provision.create_org_and_repo(Path(tmp), "abc123")
+
+        self.assertIn(("DELETE", "repos/tea-e2e-abc123/repo"), api_calls)
+        self.assertIn(("DELETE", "orgs/tea-e2e-abc123"), api_calls)
+
     def test_issue_verifier_matches_title_and_body_file(self):
         from tests.e2e.harness.model import RunContext
         from tests.e2e.suites.tea.verify_forgejo import verify_issue_expectation

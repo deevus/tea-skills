@@ -53,23 +53,38 @@ def create_org_and_repo(root: Path, run_id: str) -> ForgejoRun:
     workspace = root / "workspace" / repo
     artifact_dir.mkdir(parents=True, exist_ok=True)
 
-    api_request(config, "POST", "orgs", json.dumps({"username": org, "full_name": org}).encode("utf-8"))
-    created = api_request(
-        config,
-        "POST",
-        f"orgs/{parse.quote(org, safe='')}/repos",
-        json.dumps({"name": repo, "auto_init": True}).encode("utf-8"),
-    )
-    clone_url = created.get("clone_url") or created.get("ssh_url")
-    if not clone_url:
-        raise RuntimeError("created repository did not include a clone_url or ssh_url")
-    workspace.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(["git", "clone", clone_url, str(workspace)], check=True)
-    (workspace / "AGENTS.md").write_text("# Repository context\n\nThis repository is hosted on Forgejo.\n", encoding="utf-8")
-    subprocess.run(["git", "add", "AGENTS.md"], cwd=workspace, check=True)
-    subprocess.run(["git", "commit", "-m", "test: add agent context"], cwd=workspace, check=True)
-    subprocess.run(["git", "push", "origin", "HEAD"], cwd=workspace, check=True)
-    return ForgejoRun(run_id, org, repo, clone_url, workspace, artifact_dir, config)
+    org_created = False
+    repo_created = False
+    try:
+        api_request(config, "POST", "orgs", json.dumps({"username": org, "full_name": org}).encode("utf-8"))
+        org_created = True
+        created = api_request(
+            config,
+            "POST",
+            f"orgs/{parse.quote(org, safe='')}/repos",
+            json.dumps({"name": repo, "auto_init": True}).encode("utf-8"),
+        )
+        repo_created = True
+        clone_url = created.get("clone_url") or created.get("ssh_url")
+        if not clone_url:
+            raise RuntimeError("created repository did not include a clone_url or ssh_url")
+        workspace.parent.mkdir(parents=True, exist_ok=True)
+        subprocess.run(["git", "clone", clone_url, str(workspace)], check=True)
+        (workspace / "AGENTS.md").write_text("# Repository context\n\nThis repository is hosted on Forgejo.\n", encoding="utf-8")
+        return ForgejoRun(run_id, org, repo, clone_url, workspace, artifact_dir, config)
+    except Exception:
+        if org_created:
+            assert_safe_e2e_resource(org, run_id)
+            if repo_created:
+                try:
+                    api_request(config, "DELETE", f"repos/{parse.quote(org, safe='')}/{parse.quote(repo, safe='')}")
+                except Exception:
+                    pass
+            try:
+                api_request(config, "DELETE", f"orgs/{parse.quote(org, safe='')}")
+            except Exception:
+                pass
+        raise
 
 
 def cleanup_run(run: ForgejoRun, keep_remote: bool = False) -> None:
