@@ -18,13 +18,15 @@ Each skill lives in its own directory with a single `skills/<name>/SKILL.md` fil
 **Labels domain:** `labels`, `label-schemes`
 **API:** `using-the-tea-api`
 
-### Slash Commands → Skills Routing
+### Skill Routing
 
-`commands/*.md` files are thin stubs with YAML frontmatter including `allowed-tools` for tight Bash permissions. Each invokes its corresponding `tea:<name>` skill. The actual content lives in `skills/`.
+Skills are user-invokable directly from `skills/<name>/SKILL.md`. There is currently no `commands/` directory; keep any future command stubs thin and route behavior back to the corresponding skill.
 
 ### Scripts for API Gaps
 
-`scripts/` contains bash scripts for Gitea API features the tea CLI lacks. All scripts `source "$(dirname "$0")/tea-api"` which extracts credentials from `~/.config/tea/config.yml` and derives `OWNER`/`REPO` from the git remote. Scripts use `_api_get`, `_api_post`, `_api_patch`, `_api_delete` helpers and their `_status` variants for error handling.
+`scripts/` contains bundled bash scripts for Gitea API features the tea CLI lacks. Skill docs refer to them as `scripts/<name>` following the `llm-wiki` bundled-script convention: resolve that path relative to this installed plugin, then execute the absolute script path while keeping the working directory in the target repository. Do not require users to `cd` into the plugin root or put `scripts/` on `PATH`.
+
+All executable scripts `source "$(dirname "$0")/tea-api"`, so sibling helper lookup works from any working directory. `tea-api` extracts credentials from `~/.config/tea/config.yml` and derives `OWNER`/`REPO` from the target repository's git remote. Scripts use `_api_get`, `_api_post`, `_api_patch`, `_api_delete` helpers and their `_status` variants for error handling.
 
 ### Plugin Registration
 
@@ -43,7 +45,8 @@ Each skill lives in its own directory with a single `skills/<name>/SKILL.md` fil
 ## Key Conventions
 
 - Skills prefer `-o simple` for listing output; `--output json` only when piping to `jq`
-- Issue dependencies use the semantic "A depends on B" (B blocks A), managed entirely through `scripts/tea-dep` since tea CLI has no dependency support
+- Issue dependencies use the semantic "A depends on B" (B blocks A), managed entirely through bundled `scripts/tea-dep` since tea CLI has no dependency support
+- In skill docs, `scripts/<name>` means the bundled plugin script path, not a path in the user's repo
 - Labels are referenced by **name** in `tea issues` but by **ID** in `tea labels update/delete`
 - Milestones are referenced by **name** in CLI but by **ID** in the API
 - All API scripts derive repo context from the git remote URL automatically
@@ -51,8 +54,8 @@ Each skill lives in its own directory with a single `skills/<name>/SKILL.md` fil
 ## Adding a New Skill
 
 1. Create `skills/<name>/SKILL.md` with YAML frontmatter (`name`, `description`, `user-invokable: true`) and command reference
-2. Create `commands/<name>.md` stub with `allowed-tools` that invokes `tea:<name>`
-3. Add API scripts to `scripts/` if needed (source `tea-api` for shared helpers)
+2. Add API scripts to `scripts/` if needed (source `tea-api` for shared helpers)
+3. Document bundled script usage as `scripts/<name>` and rely on agents to resolve that path to the installed plugin root before execution
 
 ## Adding a New Script
 
