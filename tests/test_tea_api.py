@@ -118,5 +118,52 @@ class TeaApiCoreTests(unittest.TestCase):
             self.assertEqual(tea_api.discover_repo_context(), tea_api.RepoContext("owner", "repo"))
 
 
+    def test_edit_issue_comment_sends_body(self):
+        calls = []
+        adapter = tea_api.GiteaAdapter(
+            tea_api.TeaConfig("t", "https://forge.example"),
+            tea_api.RepoContext("owner", "repo"),
+            opener=lambda request: calls.append(request) or tea_api.FakeHttpResponse(200, {"id": 12}),
+        )
+        result = adapter.edit_issue_comment(12, "updated text")
+        self.assertEqual(result["id"], 12)
+        self.assertEqual(calls[0].get_method(), "PATCH")
+        self.assertTrue(calls[0].full_url.endswith("/issues/comments/12"))
+        self.assertEqual(json.loads(calls[0].data.decode("utf-8")), {"body": "updated text"})
+
+    def test_issue_dependency_add_handles_conflict(self):
+        def opener(request):
+            raise HTTPError(request.full_url, 409, "Conflict", hdrs=None, fp=tea_api.BytesBody(b"exists"))
+
+        adapter = tea_api.GiteaAdapter(
+            tea_api.TeaConfig("t", "https://forge.example"),
+            tea_api.RepoContext("owner", "repo"),
+            opener=opener,
+        )
+        self.assertEqual(adapter.add_issue_dependency(25, 26), "exists")
+
+    def test_ready_issues_filters_open_blockers(self):
+        responses = {
+            "issues": [
+                {"number": 1, "state": "open", "title": "Ready"},
+                {"number": 2, "state": "open", "title": "Blocked"},
+            ],
+            "issues/1/dependencies": [],
+            "issues/2/dependencies": [{"number": 99, "state": "open", "title": "Blocker"}],
+        }
+
+        def opener(request):
+            endpoint = request.full_url.split("/repos/owner/repo/", 1)[1].split("?", 1)[0]
+            return tea_api.FakeHttpResponse(200, responses[endpoint])
+
+        adapter = tea_api.GiteaAdapter(
+            tea_api.TeaConfig("t", "https://forge.example"),
+            tea_api.RepoContext("owner", "repo"),
+            opener=opener,
+        )
+        self.assertEqual(adapter.ready_issues(), [{"number": 1, "state": "open", "title": "Ready"}])
+
+
+
 if __name__ == "__main__":
     unittest.main()

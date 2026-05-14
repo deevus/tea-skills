@@ -207,6 +207,84 @@ class GiteaAdapter:
     def post_org(self, endpoint: str, body: Mapping[str, Any] | None = None) -> Any:
         return self.request_json("POST", self.org_url(endpoint), body)
 
+    def edit_issue_comment(self, comment_id: int, body: str) -> Any:
+        return self.patch_repo(f"issues/comments/{comment_id}", {"body": body})
+
+    def lock_issue(self, issue: int, reason: str = "resolved") -> None:
+        self.post_repo(f"issues/{issue}/lock", {"lock_reason": reason})
+
+    def unlock_issue(self, issue: int) -> None:
+        self.delete_repo(f"issues/{issue}/lock")
+
+    def pin_issue(self, issue: int) -> None:
+        self.post_repo(f"issues/{issue}/pin", {})
+
+    def unpin_issue(self, issue: int) -> None:
+        self.delete_repo(f"issues/{issue}/pin")
+
+    def add_issue_reaction(self, issue: int, reaction: str) -> Any:
+        return self.post_repo(f"issues/{issue}/reactions", {"content": reaction})
+
+    def list_issue_reactions(self, issue: int) -> list[dict[str, Any]]:
+        result = self.get_repo(f"issues/{issue}/reactions")
+        return result if isinstance(result, list) else []
+
+    def add_issue_dependency(self, issue: int, depends_on: int) -> str:
+        body = {"index": depends_on, "owner": self.repo.owner, "repo": self.repo.repo}
+        try:
+            self.post_repo(f"issues/{issue}/dependencies", body)
+        except ApiError as exc:
+            if exc.status == 409:
+                return "exists"
+            raise
+        return "added"
+
+    def remove_issue_dependency(self, issue: int, depends_on: int) -> None:
+        body = {"index": depends_on, "owner": self.repo.owner, "repo": self.repo.repo}
+        self.delete_repo(f"issues/{issue}/dependencies", body)
+
+    def list_issue_dependencies(self, issue: int) -> list[dict[str, Any]]:
+        result = self.get_repo(f"issues/{issue}/dependencies")
+        return result if isinstance(result, list) else []
+
+    def list_open_issues(self) -> list[dict[str, Any]]:
+        result = self.get_repo("issues", {"state": "open"})
+        return result if isinstance(result, list) else []
+
+    def list_all_issues(self) -> list[dict[str, Any]]:
+        result = self.get_repo("issues", {"state": "all"})
+        return result if isinstance(result, list) else []
+
+    def all_issue_dependencies(self) -> list[tuple[int, list[dict[str, Any]]]]:
+        rows: list[tuple[int, list[dict[str, Any]]]] = []
+        for issue in self.list_open_issues():
+            number = int(issue.get("number") or issue.get("index"))
+            deps = self.list_issue_dependencies(number)
+            if deps:
+                rows.append((number, deps))
+        return rows
+
+    def ready_issues(self) -> list[dict[str, Any]]:
+        ready: list[dict[str, Any]] = []
+        for issue in self.list_open_issues():
+            number = int(issue.get("number") or issue.get("index"))
+            deps = self.list_issue_dependencies(number)
+            open_blockers = [dep for dep in deps if dep.get("state") == "open"]
+            if not open_blockers:
+                ready.append(issue)
+        return ready
+
+    def dependency_graph_edges(self) -> list[tuple[int, int]]:
+        edges: list[tuple[int, int]] = []
+        for issue in self.list_all_issues():
+            number = int(issue.get("number") or issue.get("index"))
+            for dep in self.list_issue_dependencies(number):
+                dep_number = dep.get("number") or dep.get("index")
+                if dep_number is not None:
+                    edges.append((number, int(dep_number)))
+        return edges
+
+
     def request_json(self, method: str, url: str, body: Mapping[str, Any] | None = None) -> Any:
         data = None
         headers = {"Authorization": f"token {self.config.token}", "Accept": "application/json"}
