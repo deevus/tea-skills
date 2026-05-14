@@ -6,9 +6,9 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from tests.e2e.harness.model import RunContext
-from tests.e2e.harness.scenarios import load_scenarios
-from tests.e2e.harness.template import render_template
+from dokimasia.core.model import RunContext
+from dokimasia.core.scenarios import load_scenarios
+from dokimasia.core.template import render_template
 
 
 from tests.e2e import test_agent_e2e
@@ -121,22 +121,22 @@ class HarnessUnitTests(unittest.TestCase):
         self.assertTrue(event.mutates)
 
     def test_audit_expectations_fail_when_required_event_missing(self):
-        from tests.e2e.harness.audit import AuditAssertionError, assert_audit
+        from dokimasia.audit.assertions import AuditAssertionError, assert_audit
 
         with self.assertRaisesRegex(AuditAssertionError, "tea.issues.create"):
             assert_audit([], {"events": [{"root": "tea.issues.create", "min": 1, "max": 1}]})
 
     def test_audit_expectations_ignore_failed_required_events(self):
-        from tests.e2e.harness.audit import AuditAssertionError, assert_audit
-        from tests.e2e.harness.model import AuditEvent
+        from dokimasia.audit.assertions import AuditAssertionError, assert_audit
+        from dokimasia.core.model import AuditEvent
 
         events = [AuditEvent("tea.issues.create", [], "/repo", 1, True, "tea")]
         with self.assertRaisesRegex(AuditAssertionError, "tea.issues.create"):
             assert_audit(events, {"events": [{"root": "tea.issues.create", "min": 1}]})
 
     def test_audit_budgets_fail_on_repeated_root(self):
-        from tests.e2e.harness.audit import AuditAssertionError, assert_audit
-        from tests.e2e.harness.model import AuditEvent
+        from dokimasia.audit.assertions import AuditAssertionError, assert_audit
+        from dokimasia.core.model import AuditEvent
 
         events = [
             AuditEvent("tea.issues.list", [], "/repo", 0, False, "tea"),
@@ -169,8 +169,30 @@ class HarnessUnitTests(unittest.TestCase):
             with mock.patch.dict(os.environ, {"TEA_SKILLS_E2E_ARTIFACT_DIR": tmp}, clear=True):
                 run_root = test_agent_e2e.e2e_run_root("abc123")
         self.assertEqual(run_root, Path(tmp) / "abc123")
+
+    def test_make_agent_adapter_defaults_to_claude(self):
+        from dokimasia.agents.claude_code import ClaudeCodeAdapter
+
+        with mock.patch.dict(os.environ, {}, clear=True):
+            adapter = test_agent_e2e.make_agent_adapter()
+        self.assertIsInstance(adapter, ClaudeCodeAdapter)
+        self.assertEqual(adapter.plugin_dir, test_agent_e2e.ROOT)
+
+    def test_make_agent_adapter_supports_pi(self):
+        from dokimasia.agents.pi import PiAdapter
+
+        with mock.patch.dict(os.environ, {"TEA_SKILLS_E2E_AGENT": "pi"}, clear=True):
+            adapter = test_agent_e2e.make_agent_adapter()
+        self.assertIsInstance(adapter, PiAdapter)
+        self.assertEqual(adapter.skills_dir, test_agent_e2e.ROOT / "skills")
+
+    def test_make_agent_adapter_rejects_unknown_agent(self):
+        with mock.patch.dict(os.environ, {"TEA_SKILLS_E2E_AGENT": "unknown"}, clear=True):
+            with self.assertRaisesRegex(ValueError, "unknown TEA_SKILLS_E2E_AGENT"):
+                test_agent_e2e.make_agent_adapter()
+
     def test_claude_trace_parser_extracts_skill_loaded_events(self):
-        from tests.e2e.harness.agents.claude_code import parse_claude_stream_json
+        from dokimasia.agents.claude_code import parse_claude_stream_json
 
         lines = [
             json.dumps({"type": "assistant", "message": {"content": [{"type": "text", "text": "Using create-issue to create the issue."}]}}),
@@ -181,7 +203,7 @@ class HarnessUnitTests(unittest.TestCase):
         self.assertIn("create-issue", skills)
 
     def test_claude_code_adapter_stream_json_print_command_is_verbose(self):
-        from tests.e2e.harness.agents.claude_code import ClaudeCodeAdapter
+        from dokimasia.agents.claude_code import ClaudeCodeAdapter
 
         captured: dict[str, list[str]] = {}
 
@@ -191,7 +213,7 @@ class HarnessUnitTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            with mock.patch("tests.e2e.harness.agents.claude_code.subprocess.run", side_effect=fake_run):
+            with mock.patch("dokimasia.agents.claude_code.subprocess.run", side_effect=fake_run):
                 ClaudeCodeAdapter(claude_bin="claude").run(
                     "hello",
                     workspace=root,
@@ -206,7 +228,7 @@ class HarnessUnitTests(unittest.TestCase):
         self.assertIn("--verbose", command)
 
     def test_claude_code_adapter_preserves_timeout_bytes_stream_json(self):
-        from tests.e2e.harness.agents.claude_code import ClaudeCodeAdapter
+        from dokimasia.agents.claude_code import ClaudeCodeAdapter
 
         stream_line = json.dumps({
             "type": "assistant",
@@ -230,7 +252,7 @@ class HarnessUnitTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             artifact_dir = root / "artifacts"
-            with mock.patch("tests.e2e.harness.agents.claude_code.subprocess.run", side_effect=fake_run):
+            with mock.patch("dokimasia.agents.claude_code.subprocess.run", side_effect=fake_run):
                 result = ClaudeCodeAdapter(claude_bin="claude").run(
                     "hello",
                     workspace=root,
@@ -247,7 +269,7 @@ class HarnessUnitTests(unittest.TestCase):
             self.assertIn("create-issue", skills)
 
     def test_claude_code_adapter_preserves_timeout_string_stream_json(self):
-        from tests.e2e.harness.agents.claude_code import ClaudeCodeAdapter
+        from dokimasia.agents.claude_code import ClaudeCodeAdapter
 
         stream_line = json.dumps({
             "type": "assistant",
@@ -271,7 +293,7 @@ class HarnessUnitTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             artifact_dir = root / "artifacts"
-            with mock.patch("tests.e2e.harness.agents.claude_code.subprocess.run", side_effect=fake_run):
+            with mock.patch("dokimasia.agents.claude_code.subprocess.run", side_effect=fake_run):
                 result = ClaudeCodeAdapter(claude_bin="claude").run(
                     "hello",
                     workspace=root,
@@ -288,7 +310,7 @@ class HarnessUnitTests(unittest.TestCase):
             self.assertIn("create-issue", skills)
 
     def test_pi_trace_parser_extracts_skill_loaded_from_current_skill_read(self):
-        from tests.e2e.harness.agents.pi import parse_pi_json_events
+        from dokimasia.agents.pi import parse_pi_json_events
 
         lines = [
             json.dumps({
@@ -306,7 +328,7 @@ class HarnessUnitTests(unittest.TestCase):
         self.assertEqual(skills, ["create-issue"])
 
     def test_pi_trace_parser_ignores_skill_reads_outside_current_checkout(self):
-        from tests.e2e.harness.agents.pi import parse_pi_json_events
+        from dokimasia.agents.pi import parse_pi_json_events
 
         lines = [
             json.dumps({
@@ -319,7 +341,7 @@ class HarnessUnitTests(unittest.TestCase):
         self.assertEqual([event for event in events if event.kind == "skill.loaded"], [])
 
     def test_pi_adapter_command_uses_only_current_repo_skills(self):
-        from tests.e2e.harness.agents.pi import PiAdapter
+        from dokimasia.agents.pi import PiAdapter
 
         captured: dict[str, list[str]] = {}
 
@@ -331,7 +353,7 @@ class HarnessUnitTests(unittest.TestCase):
             root = Path(tmp)
             skills = root / "repo" / "skills"
             skills.mkdir(parents=True)
-            with mock.patch("tests.e2e.harness.agents.pi.subprocess.run", side_effect=fake_run):
+            with mock.patch("dokimasia.agents.pi.subprocess.run", side_effect=fake_run):
                 PiAdapter(pi_bin="pi", skills_dir=skills).run(
                     "hello",
                     workspace=root,
@@ -412,7 +434,7 @@ class HarnessUnitTests(unittest.TestCase):
         self.assertIn(("DELETE", "orgs/tea-e2e-abc123"), api_calls)
 
     def test_issue_verifier_matches_title_and_body_file(self):
-        from tests.e2e.harness.model import RunContext
+        from dokimasia.core.model import RunContext
         from tests.e2e.suites.tea.verify_forgejo import verify_issue_expectation
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -429,8 +451,8 @@ class HarnessUnitTests(unittest.TestCase):
             self.assertEqual(ctx.state["main"]["number"], 1)
 
     def test_runner_fails_when_expected_skill_is_missing(self):
-        from tests.e2e.harness.model import AgentRunResult, Scenario
-        from tests.e2e.harness.runner import ScenarioRunner
+        from dokimasia.core.model import AgentRunResult, Scenario
+        from dokimasia.core.runner import ScenarioRunner
 
         class FakeAdapter:
             def run(self, prompt, workspace, artifact_dir, env, timeout_seconds):
@@ -454,8 +476,8 @@ class HarnessUnitTests(unittest.TestCase):
             self.assertEqual(result.failure_class, "expected_skill_not_loaded")
 
     def test_runner_accepts_plugin_qualified_skill_names(self):
-        from tests.e2e.harness.model import AgentRunResult, Scenario, TraceEvent
-        from tests.e2e.harness.runner import ScenarioRunner
+        from dokimasia.core.model import AgentRunResult, Scenario, TraceEvent
+        from dokimasia.core.runner import ScenarioRunner
 
         class FakeAdapter:
             def run(self, prompt, workspace, artifact_dir, env, timeout_seconds):
@@ -487,7 +509,7 @@ class HarnessUnitTests(unittest.TestCase):
 
 
     def test_issue_verifier_supports_zero_count_assertion(self):
-        from tests.e2e.harness.model import RunContext
+        from dokimasia.core.model import RunContext
         from tests.e2e.suites.tea.verify_forgejo import verify_issue_expectation
 
         with tempfile.TemporaryDirectory() as tmp:

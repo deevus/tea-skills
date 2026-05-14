@@ -3,10 +3,11 @@ import shutil
 import unittest
 from pathlib import Path
 
-from tests.e2e.harness.agents.claude_code import ClaudeCodeAdapter
-from tests.e2e.harness.model import RunContext
-from tests.e2e.harness.runner import ScenarioRunner
-from tests.e2e.harness.scenarios import load_scenarios
+from dokimasia.agents.claude_code import ClaudeCodeAdapter
+from dokimasia.agents.pi import PiAdapter
+from dokimasia.core.model import RunContext
+from dokimasia.core.runner import ScenarioRunner
+from dokimasia.core.scenarios import load_scenarios
 from tests.e2e.suites.tea.normalize import normalize_raw_audit_event
 from tests.e2e.suites.tea.provision import cleanup_run, create_org_and_repo, new_run_id
 from tests.e2e.suites.tea.tea_spy import create_tea_spy
@@ -18,6 +19,15 @@ ROOT = Path(__file__).resolve().parents[2]
 def e2e_run_root(run_id: str) -> Path:
     base = Path(os.environ.get("TEA_SKILLS_E2E_ARTIFACT_DIR", ROOT / ".e2e-artifacts"))
     return base / run_id
+
+
+def make_agent_adapter():
+    agent = os.environ.get("TEA_SKILLS_E2E_AGENT", "claude").lower()
+    if agent == "claude":
+        return ClaudeCodeAdapter(plugin_dir=ROOT)
+    if agent == "pi":
+        return PiAdapter(skills_dir=ROOT / "skills")
+    raise ValueError(f"unknown TEA_SKILLS_E2E_AGENT: {agent}")
 
 
 @unittest.skipUnless(os.environ.get("TEA_SKILLS_E2E") == "1", "set TEA_SKILLS_E2E=1 to run live agent E2E tests")
@@ -36,12 +46,17 @@ class TeaSkillsAgentE2ETests(unittest.TestCase):
             ctx = RunContext(run.run_id, run.org, run.repo, run.workspace, run.artifact_dir)
             scenario_artifacts = run.artifact_dir / scenario.name.replace(" ", "-")
             spy = create_tea_spy(root / "spy", Path(real_tea), scenario_artifacts / "audit.jsonl")
-            adapter = ClaudeCodeAdapter(plugin_dir=ROOT)
+            adapter = make_agent_adapter()
 
             def verifier(expectations, context):
                 return verify_state(expectations, context, run.config)
 
-            runner = ScenarioRunner(adapter, normalize_raw_audit_event, verifier)
+            runner = ScenarioRunner(
+                adapter,
+                normalize_raw_audit_event,
+                verifier,
+                audit_log_env_var="TEA_SKILLS_AUDIT_LOG",
+            )
             env = {"PATH": f"{spy.path_prefix}{os.pathsep}{os.environ.get('PATH', '')}"}
             result = runner.run(scenario, ctx, env)
             self.assertTrue(
