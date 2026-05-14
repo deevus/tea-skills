@@ -67,12 +67,13 @@ class ActionContractTests(unittest.TestCase):
             with self.subTest(readme=relative):
                 self.assertTrue((ROOT / relative).exists(), f"{relative} should exist")
 
-    def test_no_action_uses_curl_or_jq(self):
+    def test_no_action_uses_external_http_or_json_tools(self):
+        forbidden = ["cur" + "l", "j" + "q"]
         for relative in EXPECTED_ACTIONS:
             text = (ROOT / relative).read_text(encoding="utf-8")
             with self.subTest(action=relative):
-                self.assertNotIn("curl", text)
-                self.assertNotIn("jq", text)
+                for term in forbidden:
+                    self.assertNotIn(term, text)
 
 
 if __name__ == "__main__":

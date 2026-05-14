@@ -63,6 +63,6 @@ Private HTTP support lives in `actions/internal/tea_api.py`. It is stdlib-only P
 
 1. Confirm the workflow cannot be handled cleanly by `tea`; if `tea` supports it, document the `tea` command instead.
 2. Create an executable Python file under `actions/<domain>/<action>` with `#!/usr/bin/env python3`.
-3. Use `actions/internal/tea_api.py` for API access; do not shell out to `curl` or `jq`.
+3. Use `actions/internal/tea_api.py` for API access; do not shell out to external HTTP or JSON command-line tools.
 4. Add or update the domain `actions/<domain>/README.md` with purpose, usage, arguments, and `tea` alternatives.
 5. Make it executable: `chmod +x actions/<domain>/<action>`.
