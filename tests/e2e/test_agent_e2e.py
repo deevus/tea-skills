@@ -8,10 +8,10 @@ from dokimasia.agents.pi import PiAdapter
 from dokimasia.core.model import RunContext
 from dokimasia.core.runner import ScenarioRunner
 from dokimasia.core.scenarios import load_scenarios
-from tests.e2e.suites.tea.normalize import normalize_raw_audit_event
-from tests.e2e.suites.tea.provision import cleanup_run, create_org_and_repo, new_run_id
-from tests.e2e.suites.tea.tea_spy import create_tea_spy
-from tests.e2e.suites.tea.verify_forgejo import verify_state
+from tests.e2e.tea_suite.normalize import normalize_raw_audit_event
+from tests.e2e.tea_suite.provision import cleanup_run, create_org_and_repo, new_run_id
+from tests.e2e.tea_suite.tea_spy import create_tea_spy
+from tests.e2e.tea_suite.verify_forgejo import verify_state
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -40,8 +40,8 @@ class TeaSkillsAgentE2ETests(unittest.TestCase):
         root.mkdir(parents=True, exist_ok=True)
         run = create_org_and_repo(root, run_id)
         try:
-            scenario_path = ROOT / "tests/e2e/suites/tea/scenarios/issues.json"
-            defaults_path = ROOT / "tests/e2e/suites/tea/defaults.json"
+            scenario_path = ROOT / "tests/e2e/tea_suite/scenarios/issues.yaml"
+            defaults_path = ROOT / "tests/e2e/tea_suite/defaults.yaml"
             scenario = load_scenarios(scenario_path, defaults_path)[0]
             ctx = RunContext(run.run_id, run.org, run.repo, run.workspace, run.artifact_dir)
             scenario_artifacts = run.artifact_dir / scenario.name.replace(" ", "-")

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from tests.e2e.harness.model import AuditEvent
+from dokimasia.core.model import AuditEvent
 
 _MUTATING_TEA_VERBS = {
     "create", "edit", "close", "reopen", "delete", "del", "rm", "merge", "approve", "reject", "review"

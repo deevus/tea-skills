@@ -4,8 +4,8 @@ from typing import Any
 from urllib import parse
 
 from actions.internal.tea_api import TeaConfig
-from tests.e2e.harness.model import RunContext
-from tests.e2e.suites.tea.provision import api_request
+from dokimasia.core.model import RunContext
+from tests.e2e.tea_suite.provision import api_request
 
 
 def list_issues(config: TeaConfig, org: str, repo: str) -> list[dict[str, Any]]:

@@ -1,0 +1,16 @@
+execution:
+  timeout_seconds: 300
+  max_turns: 1
+expect_audit:
+  budgets:
+    total_commands:
+      max: 20
+    total_mutations:
+      max: 4
+    per_root:
+      tea.issues.list:
+        max: 5
+      tea.issues.show:
+        max: 5
+      tea.labels.list:
+        max: 5

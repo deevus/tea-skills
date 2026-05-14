@@ -1,0 +1,46 @@
+scenarios:
+  - name: create issue from body file
+    tags:
+      - skill:create-issue
+      - domain:issues
+      - smoke
+    fixtures:
+      files:
+        issue-body.md: |
+          E2E body marker: {{ run.id }}
+    prompt: >-
+      Create a Forgejo issue titled "E2E {{ run.id }} create issue".
+      Use issue-body.md as the body.
+    expect_trace:
+      events:
+        - kind: skill.loaded
+          name: create-issue
+    expect_state:
+      - kind: forgejo.issue
+        id: main_issue
+        match:
+          title: E2E {{ run.id }} create issue
+        assert:
+          count: 1
+          state: open
+          body_equals_file: issue-body.md
+    expect_audit:
+      events:
+        - root: tea.issues.create
+          min: 1
+          max: 1
+      budgets:
+        total_commands:
+          max: 12
+        total_mutations:
+          max: 2
+        per_root:
+          tea.issues.create:
+            min: 1
+            max: 1
+          tea.issues.list:
+            max: 3
+          tea.issues.show:
+            max: 3
+          tea.labels.list:
+            max: 3

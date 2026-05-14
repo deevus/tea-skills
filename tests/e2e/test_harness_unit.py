@@ -51,7 +51,7 @@ class HarnessUnitTests(unittest.TestCase):
         self.assertEqual(ctx.template_data()["context"]["issue_number"], 7)
 
     def test_normalize_tea_event_classifies_issue_create_as_mutation(self):
-        from tests.e2e.suites.tea.normalize import normalize_raw_audit_event
+        from tests.e2e.tea_suite.normalize import normalize_raw_audit_event
 
         event = normalize_raw_audit_event({
             "source": "tea",
@@ -63,7 +63,7 @@ class HarnessUnitTests(unittest.TestCase):
         self.assertTrue(event.mutates)
 
     def test_normalize_tea_event_handles_command_options_before_subcommand(self):
-        from tests.e2e.suites.tea.normalize import normalize_raw_audit_event
+        from tests.e2e.tea_suite.normalize import normalize_raw_audit_event
 
         event = normalize_raw_audit_event({
             "source": "tea",
@@ -75,7 +75,7 @@ class HarnessUnitTests(unittest.TestCase):
         self.assertTrue(event.mutates)
 
     def test_normalize_tea_event_canonicalizes_aliases(self):
-        from tests.e2e.suites.tea.normalize import normalize_raw_audit_event
+        from tests.e2e.tea_suite.normalize import normalize_raw_audit_event
 
         event = normalize_raw_audit_event({
             "source": "tea",
@@ -87,7 +87,7 @@ class HarnessUnitTests(unittest.TestCase):
         self.assertTrue(event.mutates)
 
     def test_normalize_tea_event_handles_common_alias_and_option_forms(self):
-        from tests.e2e.suites.tea.normalize import normalize_raw_audit_event
+        from tests.e2e.tea_suite.normalize import normalize_raw_audit_event
 
         cases = [
             (["issues", "-R", "origin", "create"], "tea.issues.create"),
@@ -108,7 +108,7 @@ class HarnessUnitTests(unittest.TestCase):
                 self.assertTrue(event.mutates)
 
     def test_normalize_action_event_uses_action_path(self):
-        from tests.e2e.suites.tea.normalize import normalize_raw_audit_event
+        from tests.e2e.tea_suite.normalize import normalize_raw_audit_event
 
         event = normalize_raw_audit_event({
             "source": "tea-skills-action",
@@ -147,7 +147,7 @@ class HarnessUnitTests(unittest.TestCase):
             assert_audit(events, {"budgets": {"per_root": {"tea.issues.list": {"max": 2}}}})
 
     def test_tea_spy_writes_wrapper(self):
-        from tests.e2e.suites.tea.tea_spy import create_tea_spy
+        from tests.e2e.tea_suite.tea_spy import create_tea_spy
 
         with tempfile.TemporaryDirectory() as tmp:
             spy = create_tea_spy(Path(tmp), Path("/bin/tea-real"), Path(tmp) / "audit.jsonl")
@@ -370,7 +370,7 @@ class HarnessUnitTests(unittest.TestCase):
         self.assertEqual(command[command.index("--skill") + 1], str(skills))
 
     def test_cleanup_guard_accepts_only_current_run_resources(self):
-        from tests.e2e.suites.tea.provision import assert_safe_e2e_resource
+        from tests.e2e.tea_suite.provision import assert_safe_e2e_resource
 
         assert_safe_e2e_resource("tea-e2e-abc123", "abc123")
         with self.assertRaisesRegex(ValueError, "refusing"):
@@ -381,7 +381,7 @@ class HarnessUnitTests(unittest.TestCase):
 
     def test_create_org_and_repo_writes_local_context_without_pushing(self):
         from actions.internal.tea_api import TeaConfig
-        from tests.e2e.suites.tea import provision
+        from tests.e2e.tea_suite import provision
 
         api_calls = []
         git_calls = []
@@ -399,9 +399,9 @@ class HarnessUnitTests(unittest.TestCase):
             return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
 
         with tempfile.TemporaryDirectory() as tmp:
-            with mock.patch("tests.e2e.suites.tea.provision.read_tea_config", return_value=TeaConfig("token", "https://forgejo.test")), \
-                 mock.patch("tests.e2e.suites.tea.provision.api_request", side_effect=fake_api), \
-                 mock.patch("tests.e2e.suites.tea.provision.subprocess.run", side_effect=fake_run):
+            with mock.patch("tests.e2e.tea_suite.provision.read_tea_config", return_value=TeaConfig("token", "https://forgejo.test")), \
+                 mock.patch("tests.e2e.tea_suite.provision.api_request", side_effect=fake_api), \
+                 mock.patch("tests.e2e.tea_suite.provision.subprocess.run", side_effect=fake_run):
                 run = provision.create_org_and_repo(Path(tmp), "abc123")
                 self.assertEqual(run.org, "tea-e2e-abc123")
                 self.assertTrue((run.workspace / "AGENTS.md").exists())
@@ -410,7 +410,7 @@ class HarnessUnitTests(unittest.TestCase):
 
     def test_create_org_and_repo_cleans_remote_if_clone_fails(self):
         from actions.internal.tea_api import TeaConfig
-        from tests.e2e.suites.tea import provision
+        from tests.e2e.tea_suite import provision
 
         api_calls = []
 
@@ -424,9 +424,9 @@ class HarnessUnitTests(unittest.TestCase):
             raise subprocess.CalledProcessError(128, command)
 
         with tempfile.TemporaryDirectory() as tmp:
-            with mock.patch("tests.e2e.suites.tea.provision.read_tea_config", return_value=TeaConfig("token", "https://forgejo.test")), \
-                 mock.patch("tests.e2e.suites.tea.provision.api_request", side_effect=fake_api), \
-                 mock.patch("tests.e2e.suites.tea.provision.subprocess.run", side_effect=fake_run):
+            with mock.patch("tests.e2e.tea_suite.provision.read_tea_config", return_value=TeaConfig("token", "https://forgejo.test")), \
+                 mock.patch("tests.e2e.tea_suite.provision.api_request", side_effect=fake_api), \
+                 mock.patch("tests.e2e.tea_suite.provision.subprocess.run", side_effect=fake_run):
                 with self.assertRaises(subprocess.CalledProcessError):
                     provision.create_org_and_repo(Path(tmp), "abc123")
 
@@ -435,7 +435,7 @@ class HarnessUnitTests(unittest.TestCase):
 
     def test_issue_verifier_matches_title_and_body_file(self):
         from dokimasia.core.model import RunContext
-        from tests.e2e.suites.tea.verify_forgejo import verify_issue_expectation
+        from tests.e2e.tea_suite.verify_forgejo import verify_issue_expectation
 
         with tempfile.TemporaryDirectory() as tmp:
             workspace = Path(tmp)
@@ -510,7 +510,7 @@ class HarnessUnitTests(unittest.TestCase):
 
     def test_issue_verifier_supports_zero_count_assertion(self):
         from dokimasia.core.model import RunContext
-        from tests.e2e.suites.tea.verify_forgejo import verify_issue_expectation
+        from tests.e2e.tea_suite.verify_forgejo import verify_issue_expectation
 
         with tempfile.TemporaryDirectory() as tmp:
             ctx = RunContext("run", "org", "repo", Path(tmp))
