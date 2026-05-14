@@ -229,6 +229,8 @@ Action files should stay thin: argument parsing, one Adapter call, and concise o
 
 ## Testing and verification
 
+Agent-facing end-to-end integration testing is specified as an augmentation in `docs/superpowers/specs/2026-05-14-agent-e2e-harness-augmentation-design.md`. The source-of-truth architecture decision is `docs/adr/0003-agent-e2e-harness-with-audited-actions.md`.
+
 ### Unit-style Adapter tests
 
 Add tests for `actions/internal/tea_api.py` without real network access:
