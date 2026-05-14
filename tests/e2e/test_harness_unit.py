@@ -44,6 +44,49 @@ class HarnessUnitTests(unittest.TestCase):
         ctx.outputs["issue_number"] = 7
         self.assertEqual(ctx.template_data()["context"]["issue_number"], 7)
 
+    def test_normalize_tea_event_classifies_issue_create_as_mutation(self):
+        from tests.e2e.suites.tea.normalize import normalize_raw_audit_event
+
+        event = normalize_raw_audit_event({
+            "source": "tea",
+            "argv": ["issues", "create", "--title", "Hello"],
+            "cwd": "/repo",
+            "exit_code": 0,
+        })
+        self.assertEqual(event.root, "tea.issues.create")
+        self.assertTrue(event.mutates)
+
+    def test_normalize_action_event_uses_action_path(self):
+        from tests.e2e.suites.tea.normalize import normalize_raw_audit_event
+
+        event = normalize_raw_audit_event({
+            "source": "tea-skills-action",
+            "action": "actions/issues/dependency-add.py",
+            "argv": ["1", "2"],
+            "cwd": "/repo",
+            "exit_code": 0,
+        })
+        self.assertEqual(event.root, "action.issues.dependency-add")
+        self.assertTrue(event.mutates)
+
+    def test_audit_expectations_fail_when_required_event_missing(self):
+        from tests.e2e.harness.audit import AuditAssertionError, assert_audit
+
+        with self.assertRaisesRegex(AuditAssertionError, "tea.issues.create"):
+            assert_audit([], {"events": [{"root": "tea.issues.create", "min": 1, "max": 1}]})
+
+    def test_audit_budgets_fail_on_repeated_root(self):
+        from tests.e2e.harness.audit import AuditAssertionError, assert_audit
+        from tests.e2e.harness.model import AuditEvent
+
+        events = [
+            AuditEvent("tea.issues.list", [], "/repo", 0, False, "tea"),
+            AuditEvent("tea.issues.list", [], "/repo", 0, False, "tea"),
+            AuditEvent("tea.issues.list", [], "/repo", 0, False, "tea"),
+        ]
+        with self.assertRaisesRegex(AuditAssertionError, "tea.issues.list"):
+            assert_audit(events, {"budgets": {"per_root": {"tea.issues.list": {"max": 2}}}})
+
 
 if __name__ == "__main__":
     unittest.main()
