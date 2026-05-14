@@ -230,6 +230,47 @@ class HarnessUnitTests(unittest.TestCase):
             skills = [event.name for event in result.trace_events if event.kind == "skill.loaded"]
             self.assertIn("create-issue", skills)
 
+    def test_claude_code_adapter_preserves_timeout_string_stream_json(self):
+        from tests.e2e.harness.agents.claude_code import ClaudeCodeAdapter
+
+        stream_line = json.dumps({
+            "type": "assistant",
+            "message": {
+                "content": [
+                    {"type": "text", "text": "Using create-issue to create the issue."},
+                ],
+            },
+        })
+        stdout_text = f"{stream_line}\n"
+        stderr_text = "partial stderr"
+
+        def fake_run(command, **kwargs):
+            raise subprocess.TimeoutExpired(
+                command,
+                kwargs.get("timeout"),
+                output=stdout_text,
+                stderr=stderr_text,
+            )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            artifact_dir = root / "artifacts"
+            with mock.patch("tests.e2e.harness.agents.claude_code.subprocess.run", side_effect=fake_run):
+                result = ClaudeCodeAdapter(claude_bin="claude").run(
+                    "hello",
+                    workspace=root,
+                    artifact_dir=artifact_dir,
+                    env={},
+                    timeout_seconds=5,
+                )
+
+            self.assertTrue(result.timed_out)
+            self.assertEqual(result.exit_code, 124)
+            self.assertEqual((artifact_dir / "agent.stdout.jsonl").read_text(encoding="utf-8"), stdout_text)
+            self.assertEqual((artifact_dir / "agent.stderr.txt").read_text(encoding="utf-8"), stderr_text)
+            skills = [event.name for event in result.trace_events if event.kind == "skill.loaded"]
+            self.assertIn("create-issue", skills)
+
 
 if __name__ == "__main__":
     unittest.main()
