@@ -87,6 +87,17 @@ class HarnessUnitTests(unittest.TestCase):
         with self.assertRaisesRegex(AuditAssertionError, "tea.issues.list"):
             assert_audit(events, {"budgets": {"per_root": {"tea.issues.list": {"max": 2}}}})
 
+    def test_tea_spy_writes_wrapper(self):
+        from tests.e2e.suites.tea.tea_spy import create_tea_spy
+
+        with tempfile.TemporaryDirectory() as tmp:
+            spy = create_tea_spy(Path(tmp), Path("/bin/tea-real"), Path(tmp) / "audit.jsonl")
+            self.assertTrue((spy.bin_dir / "tea").exists())
+            text = (spy.bin_dir / "tea").read_text(encoding="utf-8")
+            self.assertIn("/bin/tea-real", text)
+            self.assertIn("audit.jsonl", text)
+            self.assertIn(str(spy.bin_dir), spy.path_prefix)
+
 
 if __name__ == "__main__":
     unittest.main()
