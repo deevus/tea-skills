@@ -10,6 +10,15 @@ _MUTATING_TEA_VERBS = {
 _MUTATING_ACTION_WORDS = {
     "add", "remove", "edit", "lock", "unlock", "pin", "unpin", "create", "set", "cancel"
 }
+_TEA_VALUE_OPTIONS = {
+    "--login", "--remote", "--repo", "--output", "-o", "-r",
+}
+_TEA_COMMAND_ALIASES = {
+    "issue": "issues",
+}
+_TEA_VERB_ALIASES = {
+    "c": "create",
+}
 
 
 def _clean_action_root(action: str) -> str:
@@ -19,16 +28,38 @@ def _clean_action_root(action: str) -> str:
     return "action." + clean.replace("/", ".")
 
 
+def _tea_command_parts(argv: list[str]) -> list[str]:
+    parts: list[str] = []
+    skip_next = False
+    for arg in argv:
+        if skip_next:
+            skip_next = False
+            continue
+        if arg == "--":
+            break
+        if arg.startswith("-"):
+            option = arg.split("=", 1)[0]
+            if option in _TEA_VALUE_OPTIONS and "=" not in arg:
+                skip_next = True
+            continue
+        if not parts:
+            parts.append(_TEA_COMMAND_ALIASES.get(arg, arg))
+        else:
+            parts.append(_TEA_VERB_ALIASES.get(arg, arg))
+        if len(parts) == 2:
+            break
+    return parts
+
+
 def _tea_root(argv: list[str]) -> str:
-    if not argv:
+    parts = _tea_command_parts(argv)
+    if not parts:
         return "tea"
-    return "tea." + ".".join(part for part in argv[:2] if not part.startswith("-"))
+    return "tea." + ".".join(parts)
 
 
 def _tea_mutates(argv: list[str]) -> bool:
-    if not argv:
-        return False
-    return any(part in _MUTATING_TEA_VERBS for part in argv[:3])
+    return any(part in _MUTATING_TEA_VERBS for part in _tea_command_parts(argv))
 
 
 def _action_mutates(root: str) -> bool:

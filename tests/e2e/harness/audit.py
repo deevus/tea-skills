@@ -24,9 +24,10 @@ def load_audit_events(path: Path, normalizer: Callable[[dict[str, Any]], AuditEv
 
 def assert_audit(events: list[AuditEvent], expectation: dict[str, Any]) -> None:
     counts = Counter(event.root for event in events)
+    successful_counts = Counter(event.root for event in events if event.exit_code == 0)
     for required in expectation.get("events", []):
         root = required["root"]
-        actual = counts[root]
+        actual = successful_counts[root]
         minimum = int(required.get("min", 0))
         maximum = required.get("max")
         if actual < minimum:

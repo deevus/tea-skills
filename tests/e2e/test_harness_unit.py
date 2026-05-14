@@ -56,6 +56,30 @@ class HarnessUnitTests(unittest.TestCase):
         self.assertEqual(event.root, "tea.issues.create")
         self.assertTrue(event.mutates)
 
+    def test_normalize_tea_event_handles_command_options_before_subcommand(self):
+        from tests.e2e.suites.tea.normalize import normalize_raw_audit_event
+
+        event = normalize_raw_audit_event({
+            "source": "tea",
+            "argv": ["issues", "--repo", "foo/bar", "create", "--title", "Hello"],
+            "cwd": "/repo",
+            "exit_code": 0,
+        })
+        self.assertEqual(event.root, "tea.issues.create")
+        self.assertTrue(event.mutates)
+
+    def test_normalize_tea_event_canonicalizes_aliases(self):
+        from tests.e2e.suites.tea.normalize import normalize_raw_audit_event
+
+        event = normalize_raw_audit_event({
+            "source": "tea",
+            "argv": ["issue", "c", "--title", "Hello"],
+            "cwd": "/repo",
+            "exit_code": 0,
+        })
+        self.assertEqual(event.root, "tea.issues.create")
+        self.assertTrue(event.mutates)
+
     def test_normalize_action_event_uses_action_path(self):
         from tests.e2e.suites.tea.normalize import normalize_raw_audit_event
 
@@ -74,6 +98,14 @@ class HarnessUnitTests(unittest.TestCase):
 
         with self.assertRaisesRegex(AuditAssertionError, "tea.issues.create"):
             assert_audit([], {"events": [{"root": "tea.issues.create", "min": 1, "max": 1}]})
+
+    def test_audit_expectations_ignore_failed_required_events(self):
+        from tests.e2e.harness.audit import AuditAssertionError, assert_audit
+        from tests.e2e.harness.model import AuditEvent
+
+        events = [AuditEvent("tea.issues.create", [], "/repo", 1, True, "tea")]
+        with self.assertRaisesRegex(AuditAssertionError, "tea.issues.create"):
+            assert_audit(events, {"events": [{"root": "tea.issues.create", "min": 1}]})
 
     def test_audit_budgets_fail_on_repeated_root(self):
         from tests.e2e.harness.audit import AuditAssertionError, assert_audit
