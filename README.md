@@ -14,41 +14,35 @@ Each skill is a focused, user-invokable `skills/<name>/SKILL.md` file.
 | Labels | `labels`, `label-schemes` |
 | API | `using-the-tea-api` |
 
-## Scripts
+## Actions
 
-Executable bundled scripts cover API-only operations (things `tea` CLI can't do):
+Bundled actions cover API-only operations: features Gitea/Forgejo supports but the `tea` CLI does not expose cleanly. Actions supplement `tea`; they do not replace it.
 
-| Script | Description |
+See [`actions/README.md`](actions/README.md) and the domain README files for exact commands and arguments.
+
+| Domain | Reference |
 |---|---|
-| `tea-api` | Shared credentials and API helpers (sourced by other scripts) |
-| `tea-dep` | Issue dependency management (add, rm, list, all, ready, graph) |
-| `tea-issue-pin` | Pin/unpin issues |
-| `tea-issue-react` | Add/list reactions |
-| `tea-issue-lock` | Lock/unlock issues |
-| `tea-issue-comment` | Edit comments (add/list use `tea comment` directly) |
-| `tea-pr-draft` | Create draft PRs, mark ready |
-| `tea-pr-reviewers` | Request/remove reviewers |
-| `tea-pr-automerge` | Enable/cancel auto-merge |
-| `tea-milestone-edit` | Edit milestone title, deadline, description |
-| `tea-label-org` | Manage organization-level labels |
+| Issues | `actions/issues/README.md` |
+| Pull Requests | `actions/pull-requests/README.md` |
+| Milestones | `actions/milestones/README.md` |
+| Organization Labels | `actions/org-labels/README.md` |
 
-### Bundled script invocation
+### Bundled action invocation
 
-Skill docs use `scripts/<name>` as a bundled plugin resource path. It refers to this plugin's `scripts/` directory inside the installed plugin, not to a `scripts/` directory in the user's current repository.
+Skill docs use `actions/<domain>/<action>` as a bundled plugin resource path. It refers to this plugin's `actions/` directory inside the installed plugin, not to an `actions/` directory in the user's current repository.
 
-When executing from another project, resolve `scripts/<name>` to the installed plugin root and run that absolute path while keeping the working directory in the target repository:
+When executing from another project, resolve the action to the installed plugin root and run that absolute path while keeping the working directory in the target repository:
 
 ```bash
-/path/to/tea-skills/scripts/tea-dep ready
+/path/to/tea-skills/actions/issues/dependency-ready
 ```
 
-Do not require users to `cd` into this plugin or add `scripts/` to `PATH`. The scripts intentionally run from the target repository because `scripts/tea-api` derives `OWNER` and `REPO` from that repository's git remote.
+Do not require users to `cd` into this plugin or add `actions/` to `PATH`. Actions intentionally run from the target repository because the private Adapter derives owner and repo from that repository's git remote.
 
 ## Prerequisites
 
 - [tea CLI](https://gitea.com/gitea/tea) configured with `tea login`
-- `jq` for JSON parsing
-- `curl` for API scripts
+- Python 3
 
 ## Installation
 
@@ -69,18 +63,15 @@ tea-skills/
 │   ├── hooks.json
 │   ├── run-hook.cmd
 │   └── session-start.sh
-├── scripts/
-│   ├── tea-api
-│   ├── tea-dep
-│   ├── tea-issue-pin
-│   ├── tea-issue-react
-│   ├── tea-issue-lock
-│   ├── tea-issue-comment
-│   ├── tea-pr-draft
-│   ├── tea-pr-reviewers
-│   ├── tea-pr-automerge
-│   ├── tea-milestone-edit
-│   └── tea-label-org
+├── actions/
+│   ├── README.md
+│   ├── internal/
+│   │   ├── README.md
+│   │   └── tea_api.py
+│   ├── issues/
+│   ├── pull-requests/
+│   ├── milestones/
+│   └── org-labels/
 ├── skills/
 │   ├── create-issue/
 │   ├── create-pull/
