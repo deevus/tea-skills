@@ -165,5 +165,74 @@ class TeaApiCoreTests(unittest.TestCase):
 
 
 
+    def test_find_milestone_id_by_name_uses_query_encoding(self):
+        captured = {}
+
+        def opener(request):
+            captured["url"] = request.full_url
+            return tea_api.FakeHttpResponse(200, [{"id": 7, "title": "v1.0 alpha"}])
+
+        adapter = tea_api.GiteaAdapter(
+            tea_api.TeaConfig("t", "https://forge.example"),
+            tea_api.RepoContext("owner", "repo"),
+            opener=opener,
+        )
+        self.assertEqual(adapter.find_milestone_id_by_name("v1.0 alpha"), 7)
+        self.assertTrue(captured["url"].endswith("/milestones?name=v1.0+alpha"))
+
+    def test_edit_milestone_sends_due_on_timestamp(self):
+        bodies = []
+
+        def opener(request):
+            if request.get_method() == "GET":
+                return tea_api.FakeHttpResponse(200, [{"id": 7}])
+            bodies.append(json.loads(request.data.decode("utf-8")))
+            return tea_api.FakeHttpResponse(200, {"id": 7})
+
+        adapter = tea_api.GiteaAdapter(
+            tea_api.TeaConfig("t", "https://forge.example"),
+            tea_api.RepoContext("owner", "repo"),
+            opener=opener,
+        )
+        adapter.edit_milestone("v1", due_date="2026-06-01")
+        self.assertEqual(bodies[-1], {"due_on": "2026-06-01T00:00:00Z"})
+
+    def test_create_org_label_posts_to_org_scope(self):
+        captured = {}
+
+        def opener(request):
+            captured["url"] = request.full_url
+            captured["body"] = json.loads(request.data.decode("utf-8"))
+            return tea_api.FakeHttpResponse(201, {"name": "org:team-a"})
+
+        adapter = tea_api.GiteaAdapter(
+            tea_api.TeaConfig("t", "https://forge.example"),
+            tea_api.RepoContext("owner", "repo"),
+            opener=opener,
+        )
+        adapter.create_org_label("org:team-a", "#0052cc", "Owned by Team A")
+        self.assertEqual(captured["url"], "https://forge.example/api/v1/orgs/owner/labels")
+        self.assertEqual(captured["body"]["description"], "Owned by Team A")
+
+    def test_set_automerge_enable_sends_merge_when_checks_succeed(self):
+        captured = {}
+
+        def opener(request):
+            captured["body"] = json.loads(request.data.decode("utf-8"))
+            return tea_api.FakeHttpResponse(200, {})
+
+        adapter = tea_api.GiteaAdapter(
+            tea_api.TeaConfig("t", "https://forge.example"),
+            tea_api.RepoContext("owner", "repo"),
+            opener=opener,
+        )
+        adapter.enable_pull_request_automerge(15, "squash", "feat: add auth")
+        self.assertEqual(
+            captured["body"],
+            {"Do": "squash", "merge_when_checks_succeed": True, "merge_message_field": "feat: add auth"},
+        )
+
+
+
 if __name__ == "__main__":
     unittest.main()

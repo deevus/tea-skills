@@ -285,6 +285,51 @@ class GiteaAdapter:
         return edges
 
 
+    def find_milestone_id_by_name(self, name: str) -> int:
+        result = self.get_repo("milestones", {"name": name})
+        if not isinstance(result, list) or not result:
+            raise ApiError("GET", self.repo_url("milestones", {"name": name}), 404, f"Milestone '{name}' not found")
+        milestone_id = result[0].get("id")
+        if milestone_id is None:
+            raise ApiError("GET", self.repo_url("milestones", {"name": name}), 404, f"Milestone '{name}' has no id")
+        return int(milestone_id)
+
+    def edit_milestone(
+        self,
+        name: str,
+        title: str | None = None,
+        due_date: str | None = None,
+        description: str | None = None,
+    ) -> Any:
+        body: dict[str, Any] = {}
+        if title is not None:
+            body["title"] = title
+        if due_date is not None:
+            body["due_on"] = f"{due_date}T00:00:00Z"
+        if description is not None:
+            body["description"] = description
+        if not body:
+            raise ValueError("provide at least one milestone edit field")
+        milestone_id = self.find_milestone_id_by_name(name)
+        return self.patch_repo(f"milestones/{milestone_id}", body)
+
+    def list_org_labels(self) -> list[dict[str, Any]]:
+        result = self.get_org("labels")
+        return result if isinstance(result, list) else []
+
+    def create_org_label(self, name: str, color: str, description: str = "") -> Any:
+        return self.post_org("labels", {"name": name, "color": color, "description": description})
+
+    def enable_pull_request_automerge(self, pr: int, style: str = "squash", message: str = "") -> None:
+        body: dict[str, Any] = {"Do": style, "merge_when_checks_succeed": True}
+        if message:
+            body["merge_message_field"] = message
+        self.post_repo(f"pulls/{pr}/merge", body)
+
+    def cancel_pull_request_automerge(self, pr: int) -> None:
+        self.delete_repo(f"pulls/{pr}/merge")
+
+
     def request_json(self, method: str, url: str, body: Mapping[str, Any] | None = None) -> Any:
         data = None
         headers = {"Authorization": f"token {self.config.token}", "Accept": "application/json"}
