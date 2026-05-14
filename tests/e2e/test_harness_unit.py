@@ -357,6 +357,31 @@ class HarnessUnitTests(unittest.TestCase):
             self.assertTrue(result["passed"])
             self.assertEqual(ctx.state["main"]["number"], 1)
 
+    def test_runner_fails_when_expected_skill_is_missing(self):
+        from tests.e2e.harness.model import AgentRunResult, Scenario
+        from tests.e2e.harness.runner import ScenarioRunner
+
+        class FakeAdapter:
+            def run(self, prompt, workspace, artifact_dir, env, timeout_seconds):
+                stdout = artifact_dir / "stdout.txt"
+                stderr = artifact_dir / "stderr.txt"
+                stdout.write_text("", encoding="utf-8")
+                stderr.write_text("", encoding="utf-8")
+                return AgentRunResult(0, stdout, stderr, None, [], 0.01, False)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            ctx = RunContext("run", "org", "repo", root / "workspace", root / "artifacts")
+            ctx.workspace.mkdir()
+            scenario = Scenario(
+                name="missing skill",
+                prompt="Do it",
+                expect_trace={"events": [{"kind": "skill.loaded", "name": "create-issue"}]},
+            )
+            result = ScenarioRunner(FakeAdapter(), lambda raw: raw, lambda expectations, ctx: []).run(scenario, ctx, {})
+            self.assertFalse(result.passed)
+            self.assertEqual(result.failure_class, "expected_skill_not_loaded")
+
 
     def test_issue_verifier_supports_zero_count_assertion(self):
         from tests.e2e.harness.model import RunContext
