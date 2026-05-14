@@ -98,6 +98,17 @@ class HarnessUnitTests(unittest.TestCase):
             self.assertIn("audit.jsonl", text)
             self.assertIn(str(spy.bin_dir), spy.path_prefix)
 
+    def test_claude_trace_parser_extracts_skill_loaded_events(self):
+        from tests.e2e.harness.agents.claude_code import parse_claude_stream_json
+
+        lines = [
+            json.dumps({"type": "assistant", "message": {"content": [{"type": "text", "text": "Using create-issue to create the issue."}]}}),
+            json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Skill", "input": {"skill": "create-issue"}}]}}),
+        ]
+        events = parse_claude_stream_json(lines)
+        skills = [event.name for event in events if event.kind == "skill.loaded"]
+        self.assertIn("create-issue", skills)
+
 
 if __name__ == "__main__":
     unittest.main()
