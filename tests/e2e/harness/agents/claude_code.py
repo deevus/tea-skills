@@ -76,6 +76,7 @@ class ClaudeCodeAdapter:
             "--print",
             "--output-format",
             "stream-json",
+            "--verbose",
             "--permission-mode",
             "bypassPermissions",
         ]

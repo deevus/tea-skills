@@ -1,7 +1,9 @@
 import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from tests.e2e.harness.model import RunContext
 from tests.e2e.harness.scenarios import load_scenarios
@@ -140,6 +142,31 @@ class HarnessUnitTests(unittest.TestCase):
         events = parse_claude_stream_json(lines)
         skills = [event.name for event in events if event.kind == "skill.loaded"]
         self.assertIn("create-issue", skills)
+
+    def test_claude_code_adapter_stream_json_print_command_is_verbose(self):
+        from tests.e2e.harness.agents.claude_code import ClaudeCodeAdapter
+
+        captured: dict[str, list[str]] = {}
+
+        def fake_run(command, **kwargs):
+            captured["command"] = command
+            return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with mock.patch("tests.e2e.harness.agents.claude_code.subprocess.run", side_effect=fake_run):
+                ClaudeCodeAdapter(claude_bin="claude").run(
+                    "hello",
+                    workspace=root,
+                    artifact_dir=root / "artifacts",
+                    env={},
+                    timeout_seconds=5,
+                )
+
+        command = captured["command"]
+        self.assertIn("--print", command)
+        self.assertEqual(command[command.index("--output-format") + 1], "stream-json")
+        self.assertIn("--verbose", command)
 
 
 if __name__ == "__main__":
