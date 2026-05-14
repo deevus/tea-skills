@@ -214,7 +214,7 @@ The generic harness package may use normal Python testing and packaging dependen
 During active development, `tea-skills` can consume the package as an editable path dependency:
 
 ```bash
-python -m pip install -e ../agent-e2e-harness
+python -m pip install -e /Users/sh/Projects/dokimasia
 ```
 
 Once stable, the dependency can be pinned by git SHA or package version.
@@ -228,7 +228,7 @@ TEA_SKILLS_E2E=1 python -m unittest tests.e2e.test_agent_e2e -v
 A package CLI may also be supported:
 
 ```bash
-TEA_SKILLS_E2E=1 agent-e2e run tests/e2e/tea_suite/scenarios/issues.yaml
+TEA_SKILLS_E2E=1 doki run tests/e2e/tea_suite/scenarios/issues.yaml
 ```
 
 ## Migration plan

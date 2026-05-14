@@ -53,6 +53,7 @@ Requirements:
 - `tea` is installed and already logged in to a Forgejo/Gitea server.
 - The logged-in account can create and delete organizations and repositories.
 - Claude Code is installed and authenticated.
+- Dokimasia is installed for test development: `python -m pip install -e /Users/sh/Projects/dokimasia`.
 
 Run the non-live tests:
 
@@ -64,6 +65,12 @@ Run the live create-issue agent E2E scenario:
 
 ```bash
 TEA_SKILLS_E2E=1 python -m unittest tests.e2e.test_agent_e2e -v
+```
+
+Run with Pi instead of Claude Code:
+
+```bash
+TEA_SKILLS_E2E=1 TEA_SKILLS_E2E_AGENT=pi python -m unittest tests.e2e.test_agent_e2e -v
 ```
 
 Live run artifacts are stored under `.e2e-artifacts/<run-id>/` by default. Override the artifact directory:
