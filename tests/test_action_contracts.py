@@ -75,6 +75,13 @@ class ActionContractTests(unittest.TestCase):
                 for term in forbidden:
                     self.assertNotIn(term, text)
 
+    def test_actions_use_audit_wrapper(self):
+        for relative in EXPECTED_ACTIONS:
+            text = (ROOT / relative).read_text(encoding="utf-8")
+            with self.subTest(action=relative):
+                self.assertIn("run_action", text)
+                self.assertIn("Path(__file__)", text)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -233,6 +233,66 @@ class TeaApiCoreTests(unittest.TestCase):
         )
 
 
+    def test_audit_action_noops_without_env(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "audit.jsonl"
+            with mock.patch.dict(os.environ, {}, clear=True):
+                tea_api.audit_action(action="actions/issues/lock.py", argv=["1"], exit_code=0)
+            self.assertFalse(path.exists())
+
+    def test_audit_action_writes_jsonl_when_env_is_set(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "audit.jsonl"
+            with mock.patch.dict(os.environ, {"TEA_SKILLS_AUDIT_LOG": str(path)}):
+                tea_api.audit_action(
+                    action="actions/issues/lock.py",
+                    argv=["1", "resolved"],
+                    exit_code=0,
+                    phase="finish",
+                )
+            rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0]["source"], "tea-skills-action")
+            self.assertEqual(rows[0]["action"], "actions/issues/lock.py")
+            self.assertEqual(rows[0]["argv"], ["1", "resolved"])
+            self.assertEqual(rows[0]["phase"], "finish")
+            self.assertEqual(rows[0]["exit_code"], 0)
+            self.assertIn("cwd", rows[0])
+            self.assertIn("timestamp", rows[0])
+            self.assertIn("pid", rows[0])
+
+    def test_run_action_logs_exit_code(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "audit.jsonl"
+
+            def main(argv):
+                self.assertEqual(argv, ["7"])
+                return 3
+
+            with mock.patch.dict(os.environ, {"TEA_SKILLS_AUDIT_LOG": str(path)}):
+                exit_code = tea_api.run_action(Path("/repo/actions/issues/lock.py"), ["7"], main)
+
+            self.assertEqual(exit_code, 3)
+            row = json.loads(path.read_text(encoding="utf-8").strip())
+            self.assertEqual(row["action"], "actions/issues/lock.py")
+            self.assertEqual(row["exit_code"], 3)
+
+    def test_run_action_logs_unhandled_exception_then_reraises(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "audit.jsonl"
+
+            def main(argv):
+                raise RuntimeError("boom")
+
+            with mock.patch.dict(os.environ, {"TEA_SKILLS_AUDIT_LOG": str(path)}):
+                with self.assertRaisesRegex(RuntimeError, "boom"):
+                    tea_api.run_action(Path("/repo/actions/issues/lock.py"), [], main)
+
+            row = json.loads(path.read_text(encoding="utf-8").strip())
+            self.assertEqual(row["action"], "actions/issues/lock.py")
+            self.assertEqual(row["exit_code"], 1)
+            self.assertEqual(row["error"], "RuntimeError: boom")
+
 
 if __name__ == "__main__":
     unittest.main()

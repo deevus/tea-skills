@@ -4,11 +4,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 from typing import Any, Callable, Mapping
 from urllib import parse, request
 from urllib.error import HTTPError, URLError
@@ -354,6 +356,68 @@ class GiteaAdapter:
             return json.loads(text)
         except json.JSONDecodeError:
             return text
+
+
+def action_name_from_path(path: Path) -> str:
+    """Return a stable actions/... path for an action executable."""
+    resolved = Path(path)
+    parts = resolved.parts
+    if "actions" in parts:
+        index = len(parts) - 1 - list(reversed(parts)).index("actions")
+        return "/".join(parts[index:])
+    return str(resolved)
+
+
+def audit_action(
+    action: str,
+    argv: list[str],
+    exit_code: int,
+    phase: str = "finish",
+    error: str | None = None,
+) -> None:
+    """Append an action audit event when TEA_SKILLS_AUDIT_LOG is set."""
+    log_path = os.environ.get("TEA_SKILLS_AUDIT_LOG")
+    if not log_path or os.environ.get("TEA_SKILLS_AUDIT_DISABLE") == "1":
+        return
+
+    event: dict[str, Any] = {
+        "source": "tea-skills-action",
+        "action": action,
+        "argv": list(argv),
+        "cwd": os.getcwd(),
+        "pid": os.getpid(),
+        "phase": phase,
+        "exit_code": exit_code,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    if error:
+        event["error"] = error
+
+    path = Path(log_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(event, sort_keys=True) + "\n")
+
+
+def run_action(action_file: Path, argv: list[str], main: Callable[[list[str]], int]) -> int:
+    """Run an action main function and record its audited finish event."""
+    action = action_name_from_path(action_file)
+    try:
+        exit_code = int(main(argv))
+    except SystemExit as exc:
+        code = exc.code if isinstance(exc.code, int) else 1
+        audit_action(action=action, argv=argv, exit_code=code)
+        raise
+    except Exception as exc:
+        audit_action(
+            action=action,
+            argv=argv,
+            exit_code=1,
+            error=f"{exc.__class__.__name__}: {exc}",
+        )
+        raise
+    audit_action(action=action, argv=argv, exit_code=exit_code)
+    return exit_code
 
 
 def default_adapter() -> GiteaAdapter:

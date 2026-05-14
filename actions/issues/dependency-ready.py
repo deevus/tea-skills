@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "internal"))
-from tea_api import ApiError, TeaConfigError, RepoContextError, default_adapter
+from tea_api import ApiError, TeaConfigError, RepoContextError, default_adapter, run_action
 
 
 def main(argv: list[str]) -> int:
@@ -23,4 +23,4 @@ def main(argv: list[str]) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(sys.argv[1:]))
+    raise SystemExit(run_action(Path(__file__), sys.argv[1:], main))
