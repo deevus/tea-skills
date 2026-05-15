@@ -53,30 +53,30 @@ Requirements:
 - `tea` is installed and already logged in to a Forgejo/Gitea server.
 - The logged-in account can create and delete organizations and repositories.
 - Claude Code is installed and authenticated.
-- Dokimasia is installed for test development: `python -m pip install -e /Users/sh/Projects/dokimasia`.
+- `uv` is installed. The E2E test commands install Dokimasia from `git+ssh://git@forgejo.tail9a847c.ts.net/sh/dokimasia.git`.
 
 Run the non-live tests:
 
 ```bash
-python -m unittest discover -s tests -v
+uv run --with 'dokimasia @ git+ssh://git@forgejo.tail9a847c.ts.net/sh/dokimasia.git' python -m unittest discover -s tests -v
 ```
 
 Run the live create-issue agent E2E scenario:
 
 ```bash
-TEA_SKILLS_E2E=1 python -m unittest tests.e2e.test_agent_e2e -v
+TEA_SKILLS_E2E=1 uv run --with 'dokimasia @ git+ssh://git@forgejo.tail9a847c.ts.net/sh/dokimasia.git' python -m unittest tests.e2e.test_agent_e2e -v
 ```
 
 Run with Pi instead of Claude Code:
 
 ```bash
-TEA_SKILLS_E2E=1 TEA_SKILLS_E2E_AGENT=pi python -m unittest tests.e2e.test_agent_e2e -v
+TEA_SKILLS_E2E=1 TEA_SKILLS_E2E_AGENT=pi uv run --with 'dokimasia @ git+ssh://git@forgejo.tail9a847c.ts.net/sh/dokimasia.git' python -m unittest tests.e2e.test_agent_e2e -v
 ```
 
 Live run artifacts are stored under `.e2e-artifacts/<run-id>/` by default. Override the artifact directory:
 
 ```bash
-TEA_SKILLS_E2E=1 TEA_SKILLS_E2E_ARTIFACT_DIR=/tmp/tea-skills-e2e python -m unittest tests.e2e.test_agent_e2e -v
+TEA_SKILLS_E2E=1 TEA_SKILLS_E2E_ARTIFACT_DIR=/tmp/tea-skills-e2e uv run --with 'dokimasia @ git+ssh://git@forgejo.tail9a847c.ts.net/sh/dokimasia.git' python -m unittest tests.e2e.test_agent_e2e -v
 ```
 
 Preserve the disposable remote resources for debugging:

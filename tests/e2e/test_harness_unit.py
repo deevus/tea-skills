@@ -146,16 +146,26 @@ class HarnessUnitTests(unittest.TestCase):
         with self.assertRaisesRegex(AuditAssertionError, "tea.issues.list"):
             assert_audit(events, {"budgets": {"per_root": {"tea.issues.list": {"max": 2}}}})
 
-    def test_tea_spy_writes_wrapper(self):
-        from tests.e2e.tea_suite.tea_spy import create_tea_spy
+    def test_suite_spy_writes_tea_wrapper(self):
+        from dokimasia.suite.spy import CommandSpy, create_spy
 
         with tempfile.TemporaryDirectory() as tmp:
-            spy = create_tea_spy(Path(tmp), Path("/bin/tea-real"), Path(tmp) / "audit.jsonl")
+            spy = create_spy(
+                root=Path(tmp),
+                executable_name="tea",
+                real_executable=Path("/bin/tea-real"),
+                audit_log=Path(tmp) / "audit.jsonl",
+                source="tea",
+            )
+            self.assertIsInstance(spy, CommandSpy)
             self.assertTrue((spy.bin_dir / "tea").exists())
             text = (spy.bin_dir / "tea").read_text(encoding="utf-8")
             self.assertIn("/bin/tea-real", text)
             self.assertIn("audit.jsonl", text)
             self.assertIn(str(spy.bin_dir), spy.path_prefix)
+
+    def test_local_tea_spy_wrapper_is_removed(self):
+        self.assertFalse((test_agent_e2e.ROOT / "tests/e2e/tea_suite/tea_spy.py").exists())
 
 
 

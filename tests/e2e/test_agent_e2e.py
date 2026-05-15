@@ -10,7 +10,7 @@ from dokimasia.core.runner import ScenarioRunner
 from dokimasia.core.scenarios import load_scenarios
 from tests.e2e.tea_suite.normalize import normalize_raw_audit_event
 from tests.e2e.tea_suite.provision import cleanup_run, create_org_and_repo, new_run_id
-from tests.e2e.tea_suite.tea_spy import create_tea_spy
+from dokimasia.suite.spy import create_spy
 from tests.e2e.tea_suite.verify_forgejo import verify_state
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -45,7 +45,13 @@ class TeaSkillsAgentE2ETests(unittest.TestCase):
             scenario = load_scenarios(scenario_path, defaults_path)[0]
             ctx = RunContext(run.run_id, run.org, run.repo, run.workspace, run.artifact_dir)
             scenario_artifacts = run.artifact_dir / scenario.name.replace(" ", "-")
-            spy = create_tea_spy(root / "spy", Path(real_tea), scenario_artifacts / "audit.jsonl")
+            spy = create_spy(
+                root=root / "spy",
+                executable_name="tea",
+                real_executable=Path(real_tea),
+                audit_log=scenario_artifacts / "audit.jsonl",
+                source="tea",
+            )
             adapter = make_agent_adapter()
 
             def verifier(expectations, context):
@@ -57,7 +63,7 @@ class TeaSkillsAgentE2ETests(unittest.TestCase):
                 verifier,
                 audit_log_env_var="TEA_SKILLS_AUDIT_LOG",
             )
-            env = {"PATH": f"{spy.path_prefix}{os.pathsep}{os.environ.get('PATH', '')}"}
+            env = spy.env_with_path(os.environ)
             result = runner.run(scenario, ctx, env)
             self.assertTrue(
                 result.passed,
