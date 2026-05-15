@@ -4,7 +4,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "internal"))
-from tea_api import ApiError, TeaConfigError, RepoContextError, default_adapter, run_action
+from tea_api import ApiError, TeaConfigError, RepoContextError, run_action
+from org_scope import default_org_scope
+from org_labels import create as create_org_label
 
 
 def main(argv: list[str]) -> int:
@@ -14,7 +16,7 @@ def main(argv: list[str]) -> int:
     parser.add_argument("description", nargs="?", default="")
     args = parser.parse_args(argv)
     try:
-        label = default_adapter().create_org_label(args.name, args.color, args.description)
+        label = create_org_label(default_org_scope(), args.name, args.color, args.description)
     except (ApiError, TeaConfigError, RepoContextError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1

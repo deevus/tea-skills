@@ -1,14 +1,12 @@
 # Internal action support
 
-`tea_api.py` is a private Python Module used by bundled actions. It is not a user-facing command Interface.
+Internal Python Modules support bundled actions. They are not user-facing command Interfaces.
 
 Responsibilities:
 
-- discover tea config from `$XDG_CONFIG_HOME/tea/config.yml` or `~/.config/tea/config.yml`
-- derive repo owner/name from `git remote get-url origin`
-- build repo and org API URLs
-- encode query strings and JSON bodies safely
-- send authenticated Gitea/Forgejo HTTP requests with Python stdlib only
-- expose domain helper functions for action executables
+- `tea_api.py` discovers tea config, sends authenticated Gitea/Forgejo HTTP requests, translates transport errors, and records action audit events
+- `repo_scope.py` derives repo-scoped Forgejo API access from `git remote get-url origin`
+- `org_scope.py` derives organization-scoped Forgejo API access from the current repository owner
+- domain Modules (`issues.py`, `pulls.py`, `milestones.py`, `org_labels.py`) expose domain operations for action executables
 
 Users and agents should use documented commands in the domain README files instead of importing this Module directly.

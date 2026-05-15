@@ -4,7 +4,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "internal"))
-from tea_api import ApiError, TeaConfigError, RepoContextError, default_adapter, run_action
+from tea_api import ApiError, TeaConfigError, RepoContextError, run_action
+from repo_scope import default_repo_scope
+from pulls import cancel_automerge, enable_automerge
 
 
 def main(argv: list[str]) -> int:
@@ -17,12 +19,12 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--message", default="")
     args = parser.parse_args(argv)
     try:
-        adapter = default_adapter()
+        scope = default_repo_scope()
         if args.enable:
-            adapter.enable_pull_request_automerge(args.pr, args.style, args.message)
+            enable_automerge(scope, args.pr, args.style, args.message)
             print(f"Auto-merge enabled on PR #{args.pr} ({args.style})")
         else:
-            adapter.cancel_pull_request_automerge(args.pr)
+            cancel_automerge(scope, args.pr)
             print(f"Auto-merge cancelled on PR #{args.pr}")
     except (ApiError, TeaConfigError, RepoContextError) as exc:
         print(f"error: {exc}", file=sys.stderr)

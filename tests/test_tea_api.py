@@ -7,10 +7,22 @@ from pathlib import Path
 from unittest import mock
 from urllib.error import HTTPError
 
-from actions.internal import tea_api
+from actions.internal import issues, milestones, org_labels, org_scope, pulls, repo_scope, tea_api
 
 
 class TeaApiCoreTests(unittest.TestCase):
+    def make_repo_scope(self, opener):
+        return repo_scope.RepositoryScope(
+            tea_api.GiteaAdapter(tea_api.TeaConfig("t", "https://forge.example"), opener=opener),
+            tea_api.RepoContext("owner", "repo"),
+        )
+
+    def make_org_scope(self, opener):
+        return org_scope.OrgScope(
+            tea_api.GiteaAdapter(tea_api.TeaConfig("t", "https://forge.example"), opener=opener),
+            "owner",
+        )
+
     def test_config_path_prefers_xdg_config_home(self):
         with tempfile.TemporaryDirectory() as tmp:
             xdg = Path(tmp) / "xdg"
@@ -58,8 +70,8 @@ class TeaApiCoreTests(unittest.TestCase):
     def test_build_url_encodes_query_values(self):
         config = tea_api.TeaConfig(token="t", base_url="https://forge.example")
         context = tea_api.RepoContext(owner="alice", repo="project")
-        adapter = tea_api.GiteaAdapter(config=config, repo=context, opener=lambda request: None)
-        url = adapter.repo_url("milestones", {"name": "v1.0 alpha"})
+        scope = repo_scope.RepositoryScope(tea_api.GiteaAdapter(config=config, opener=lambda request: None), context)
+        url = scope.url("milestones", {"name": "v1.0 alpha"})
         self.assertEqual(
             url,
             "https://forge.example/api/v1/repos/alice/project/milestones?name=v1.0+alpha",
@@ -77,8 +89,8 @@ class TeaApiCoreTests(unittest.TestCase):
 
         config = tea_api.TeaConfig(token="secret", base_url="https://forge.example")
         context = tea_api.RepoContext(owner="alice", repo="project")
-        adapter = tea_api.GiteaAdapter(config=config, repo=context, opener=opener)
-        result = adapter.post_repo("issues/1/reactions", {"content": "+1"})
+        scope = repo_scope.RepositoryScope(tea_api.GiteaAdapter(config=config, opener=opener), context)
+        result = scope.post("issues/1/reactions", {"content": "+1"})
 
         self.assertEqual(result, {"id": 1})
         self.assertEqual(captured["method"], "POST")
@@ -98,10 +110,10 @@ class TeaApiCoreTests(unittest.TestCase):
 
         config = tea_api.TeaConfig(token="secret", base_url="https://forge.example")
         context = tea_api.RepoContext(owner="alice", repo="project")
-        adapter = tea_api.GiteaAdapter(config=config, repo=context, opener=opener)
+        scope = repo_scope.RepositoryScope(tea_api.GiteaAdapter(config=config, opener=opener), context)
 
         with self.assertRaises(tea_api.ApiError) as raised:
-            adapter.post_repo("issues/1/dependencies", {"index": 2})
+            scope.post("issues/1/dependencies", {"index": 2})
 
         self.assertEqual(raised.exception.status, 409)
         self.assertIn("POST", str(raised.exception))
@@ -116,12 +128,8 @@ class TeaApiCoreTests(unittest.TestCase):
 
     def test_edit_issue_comment_sends_body(self):
         calls = []
-        adapter = tea_api.GiteaAdapter(
-            tea_api.TeaConfig("t", "https://forge.example"),
-            tea_api.RepoContext("owner", "repo"),
-            opener=lambda request: calls.append(request) or tea_api.FakeHttpResponse(200, {"id": 12}),
-        )
-        result = adapter.edit_issue_comment(12, "updated text")
+        scope = self.make_repo_scope(lambda request: calls.append(request) or tea_api.FakeHttpResponse(200, {"id": 12}))
+        result = issues.edit_comment(scope, 12, "updated text")
         self.assertEqual(result["id"], 12)
         self.assertEqual(calls[0].get_method(), "PATCH")
         self.assertTrue(calls[0].full_url.endswith("/issues/comments/12"))
@@ -131,12 +139,8 @@ class TeaApiCoreTests(unittest.TestCase):
         def opener(request):
             raise HTTPError(request.full_url, 409, "Conflict", hdrs=None, fp=tea_api.BytesBody(b"exists"))
 
-        adapter = tea_api.GiteaAdapter(
-            tea_api.TeaConfig("t", "https://forge.example"),
-            tea_api.RepoContext("owner", "repo"),
-            opener=opener,
-        )
-        self.assertEqual(adapter.add_issue_dependency(25, 26), "exists")
+        scope = self.make_repo_scope(opener)
+        self.assertEqual(issues.add_dependency(scope, 25, 26), "exists")
 
     def test_ready_issues_filters_open_blockers(self):
         responses = {
@@ -152,12 +156,8 @@ class TeaApiCoreTests(unittest.TestCase):
             endpoint = request.full_url.split("/repos/owner/repo/", 1)[1].split("?", 1)[0]
             return tea_api.FakeHttpResponse(200, responses[endpoint])
 
-        adapter = tea_api.GiteaAdapter(
-            tea_api.TeaConfig("t", "https://forge.example"),
-            tea_api.RepoContext("owner", "repo"),
-            opener=opener,
-        )
-        self.assertEqual(adapter.ready_issues(), [{"number": 1, "state": "open", "title": "Ready"}])
+        scope = self.make_repo_scope(opener)
+        self.assertEqual(issues.ready(scope), [{"number": 1, "state": "open", "title": "Ready"}])
 
     def test_find_milestone_id_by_name_uses_query_encoding(self):
         captured = {}
@@ -166,12 +166,8 @@ class TeaApiCoreTests(unittest.TestCase):
             captured["url"] = request.full_url
             return tea_api.FakeHttpResponse(200, [{"id": 7, "title": "v1.0 alpha"}])
 
-        adapter = tea_api.GiteaAdapter(
-            tea_api.TeaConfig("t", "https://forge.example"),
-            tea_api.RepoContext("owner", "repo"),
-            opener=opener,
-        )
-        self.assertEqual(adapter.find_milestone_id_by_name("v1.0 alpha"), 7)
+        scope = self.make_repo_scope(opener)
+        self.assertEqual(milestones.find_id_by_name(scope, "v1.0 alpha"), 7)
         self.assertTrue(captured["url"].endswith("/milestones?name=v1.0+alpha"))
 
     def test_edit_milestone_sends_due_on_timestamp(self):
@@ -183,12 +179,8 @@ class TeaApiCoreTests(unittest.TestCase):
             bodies.append(json.loads(request.data.decode("utf-8")))
             return tea_api.FakeHttpResponse(200, {"id": 7})
 
-        adapter = tea_api.GiteaAdapter(
-            tea_api.TeaConfig("t", "https://forge.example"),
-            tea_api.RepoContext("owner", "repo"),
-            opener=opener,
-        )
-        adapter.edit_milestone("v1", due_date="2026-06-01")
+        scope = self.make_repo_scope(opener)
+        milestones.edit(scope, "v1", due_date="2026-06-01")
         self.assertEqual(bodies[-1], {"due_on": "2026-06-01T00:00:00Z"})
 
     def test_create_org_label_posts_to_org_scope(self):
@@ -199,12 +191,8 @@ class TeaApiCoreTests(unittest.TestCase):
             captured["body"] = json.loads(request.data.decode("utf-8"))
             return tea_api.FakeHttpResponse(201, {"name": "org:team-a"})
 
-        adapter = tea_api.GiteaAdapter(
-            tea_api.TeaConfig("t", "https://forge.example"),
-            tea_api.RepoContext("owner", "repo"),
-            opener=opener,
-        )
-        adapter.create_org_label("org:team-a", "#0052cc", "Owned by Team A")
+        scope = self.make_org_scope(opener)
+        org_labels.create(scope, "org:team-a", "#0052cc", "Owned by Team A")
         self.assertEqual(captured["url"], "https://forge.example/api/v1/orgs/owner/labels")
         self.assertEqual(captured["body"]["description"], "Owned by Team A")
 
@@ -215,12 +203,8 @@ class TeaApiCoreTests(unittest.TestCase):
             captured["body"] = json.loads(request.data.decode("utf-8"))
             return tea_api.FakeHttpResponse(200, {})
 
-        adapter = tea_api.GiteaAdapter(
-            tea_api.TeaConfig("t", "https://forge.example"),
-            tea_api.RepoContext("owner", "repo"),
-            opener=opener,
-        )
-        adapter.enable_pull_request_automerge(15, "squash", "feat: add auth")
+        scope = self.make_repo_scope(opener)
+        pulls.enable_automerge(scope, 15, "squash", "feat: add auth")
         self.assertEqual(
             captured["body"],
             {"Do": "squash", "merge_when_checks_succeed": True, "merge_message_field": "feat: add auth"},
@@ -259,14 +243,10 @@ class TeaApiCoreTests(unittest.TestCase):
             captured["url"] = request.full_url
             return tea_api.FakeHttpResponse(200, payload)
 
-        adapter = tea_api.GiteaAdapter(
-            tea_api.TeaConfig("t", "https://forge.example"),
-            tea_api.RepoContext("owner", "repo"),
-            opener=opener,
-        )
+        scope = self.make_repo_scope(opener)
 
         self.assertEqual(
-            adapter.find_pull_requests_by_branch("feature", base="main", state="open"),
+            pulls.find_by_branch(scope, "feature", base="main", state="open"),
             [
                 {
                     "number": 12,
@@ -281,10 +261,7 @@ class TeaApiCoreTests(unittest.TestCase):
         self.assertTrue(captured["url"].endswith("/pulls?state=open&base_branch=main"))
 
     def test_find_pull_requests_by_branch_matches_owner_prefixed_head_label(self):
-        adapter = tea_api.GiteaAdapter(
-            tea_api.TeaConfig("t", "https://forge.example"),
-            tea_api.RepoContext("owner", "repo"),
-            opener=lambda request: tea_api.FakeHttpResponse(
+        scope = self.make_repo_scope(lambda request: tea_api.FakeHttpResponse(
                 200,
                 [
                     {
@@ -304,10 +281,10 @@ class TeaApiCoreTests(unittest.TestCase):
                         "base": {"label": "owner:main", "ref": "main"},
                     },
                 ],
-            ),
+            )
         )
 
-        matches = adapter.find_pull_requests_by_branch("contributor:feature", state="all")
+        matches = pulls.find_by_branch(scope, "contributor:feature", state="all")
 
         self.assertEqual([match["number"] for match in matches], [12])
         self.assertEqual(matches[0]["head"], {"owner": "contributor", "branch": "feature"})

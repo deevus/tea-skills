@@ -7,7 +7,9 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "internal"))
-from tea_api import ApiError, TeaConfigError, RepoContextError, default_adapter, run_action
+from tea_api import ApiError, TeaConfigError, RepoContextError, run_action
+from repo_scope import default_repo_scope
+from pulls import find_by_branch
 
 
 VALID_STATES = {"open", "closed", "all"}
@@ -65,7 +67,7 @@ def main(argv: list[str]) -> int:
         return 1
 
     try:
-        matches = default_adapter().find_pull_requests_by_branch(head, base=base, state=args.state)
+        matches = find_by_branch(default_repo_scope(), head, base=base, state=args.state)
     except (ApiError, TeaConfigError, RepoContextError) as exc:
         write_error("api_error", str(exc))
         return 1

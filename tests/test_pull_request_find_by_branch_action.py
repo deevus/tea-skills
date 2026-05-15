@@ -23,17 +23,19 @@ def load_action_module():
 class FindPullRequestByBranchActionTests(unittest.TestCase):
     def test_uses_current_branch_by_default_and_writes_jsonl_matches(self):
         module = load_action_module()
-        fake_adapter = mock.Mock()
-        fake_adapter.find_pull_requests_by_branch.return_value = [
-            {
-                "number": 12,
-                "url": "https://forge.example/owner/repo/pulls/12",
-                "title": "Feature",
-                "state": "open",
-                "head": {"owner": "owner", "branch": "feature"},
-                "base": {"owner": "owner", "branch": "main"},
-            }
-        ]
+        fake_scope = mock.Mock()
+        find_by_branch = mock.Mock(
+            return_value=[
+                {
+                    "number": 12,
+                    "url": "https://forge.example/owner/repo/pulls/12",
+                    "title": "Feature",
+                    "state": "open",
+                    "head": {"owner": "owner", "branch": "feature"},
+                    "base": {"owner": "owner", "branch": "main"},
+                }
+            ]
+        )
         branch = subprocess.CompletedProcess(
             args=["git", "branch", "--show-current"],
             returncode=0,
@@ -44,7 +46,8 @@ class FindPullRequestByBranchActionTests(unittest.TestCase):
         stderr = io.StringIO()
 
         with (
-            mock.patch.object(module, "default_adapter", return_value=fake_adapter),
+            mock.patch.object(module, "default_repo_scope", return_value=fake_scope),
+            mock.patch.object(module, "find_by_branch", find_by_branch),
             mock.patch("subprocess.run", return_value=branch),
             contextlib.redirect_stdout(stdout),
             contextlib.redirect_stderr(stderr),
@@ -53,34 +56,37 @@ class FindPullRequestByBranchActionTests(unittest.TestCase):
 
         self.assertEqual(exit_code, 0)
         self.assertEqual(stderr.getvalue(), "")
-        self.assertEqual(json.loads(stdout.getvalue()), fake_adapter.find_pull_requests_by_branch.return_value[0])
-        fake_adapter.find_pull_requests_by_branch.assert_called_once_with("feature", base=None, state="open")
+        self.assertEqual(json.loads(stdout.getvalue()), find_by_branch.return_value[0])
+        find_by_branch.assert_called_once_with(fake_scope, "feature", base=None, state="open")
 
     def test_writes_one_jsonl_record_per_match(self):
         module = load_action_module()
-        fake_adapter = mock.Mock()
-        fake_adapter.find_pull_requests_by_branch.return_value = [
-            {
-                "number": 12,
-                "url": "https://forge.example/pulls/12",
-                "title": "A",
-                "state": "open",
-                "head": {"owner": "o", "branch": "f"},
-                "base": {"owner": "o", "branch": "main"},
-            },
-            {
-                "number": 13,
-                "url": "https://forge.example/pulls/13",
-                "title": "B",
-                "state": "open",
-                "head": {"owner": "o", "branch": "f"},
-                "base": {"owner": "o", "branch": "develop"},
-            },
-        ]
+        fake_scope = mock.Mock()
+        find_by_branch = mock.Mock(
+            return_value=[
+                {
+                    "number": 12,
+                    "url": "https://forge.example/pulls/12",
+                    "title": "A",
+                    "state": "open",
+                    "head": {"owner": "o", "branch": "f"},
+                    "base": {"owner": "o", "branch": "main"},
+                },
+                {
+                    "number": 13,
+                    "url": "https://forge.example/pulls/13",
+                    "title": "B",
+                    "state": "open",
+                    "head": {"owner": "o", "branch": "f"},
+                    "base": {"owner": "o", "branch": "develop"},
+                },
+            ]
+        )
         stdout = io.StringIO()
 
         with (
-            mock.patch.object(module, "default_adapter", return_value=fake_adapter),
+            mock.patch.object(module, "default_repo_scope", return_value=fake_scope),
+            mock.patch.object(module, "find_by_branch", find_by_branch),
             contextlib.redirect_stdout(stdout),
         ):
             exit_code = module.main(["--head", "feature", "--state", "all"])
@@ -88,17 +94,18 @@ class FindPullRequestByBranchActionTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         rows = [json.loads(line) for line in stdout.getvalue().splitlines()]
         self.assertEqual([row["number"] for row in rows], [12, 13])
-        fake_adapter.find_pull_requests_by_branch.assert_called_once_with("feature", base=None, state="all")
+        find_by_branch.assert_called_once_with(fake_scope, "feature", base=None, state="all")
 
     def test_no_matches_writes_jsonl_error_to_stderr(self):
         module = load_action_module()
-        fake_adapter = mock.Mock()
-        fake_adapter.find_pull_requests_by_branch.return_value = []
+        fake_scope = mock.Mock()
+        find_by_branch = mock.Mock(return_value=[])
         stdout = io.StringIO()
         stderr = io.StringIO()
 
         with (
-            mock.patch.object(module, "default_adapter", return_value=fake_adapter),
+            mock.patch.object(module, "default_repo_scope", return_value=fake_scope),
+            mock.patch.object(module, "find_by_branch", find_by_branch),
             contextlib.redirect_stdout(stdout),
             contextlib.redirect_stderr(stderr),
         ):
@@ -171,7 +178,7 @@ class FindPullRequestByBranchActionTests(unittest.TestCase):
             with self.subTest(exception=exception.__class__.__name__):
                 stderr = io.StringIO()
                 with (
-                    mock.patch.object(module, "default_adapter", side_effect=exception),
+                    mock.patch.object(module, "default_repo_scope", side_effect=exception),
                     contextlib.redirect_stderr(stderr),
                 ):
                     exit_code = module.main(["--head", "feature"])

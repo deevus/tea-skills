@@ -3,7 +3,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "internal"))
-from tea_api import ApiError, TeaConfigError, RepoContextError, default_adapter, run_action
+from tea_api import ApiError, TeaConfigError, RepoContextError, run_action
+from org_scope import default_org_scope
+from org_labels import list_labels
 
 
 def main(argv: list[str]) -> int:
@@ -11,7 +13,7 @@ def main(argv: list[str]) -> int:
         print("usage: list", file=sys.stderr)
         return 2
     try:
-        labels = default_adapter().list_org_labels()
+        labels = list_labels(default_org_scope())
     except (ApiError, TeaConfigError, RepoContextError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1

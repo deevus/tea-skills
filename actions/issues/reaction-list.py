@@ -4,7 +4,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "internal"))
-from tea_api import ApiError, TeaConfigError, RepoContextError, default_adapter, run_action
+from tea_api import ApiError, TeaConfigError, RepoContextError, run_action
+from repo_scope import default_repo_scope
+from issues import list_reactions
 
 
 def main(argv: list[str]) -> int:
@@ -12,7 +14,7 @@ def main(argv: list[str]) -> int:
     parser.add_argument("issue", type=int)
     args = parser.parse_args(argv)
     try:
-        reactions = default_adapter().list_issue_reactions(args.issue)
+        reactions = list_reactions(default_repo_scope(), args.issue)
     except (ApiError, TeaConfigError, RepoContextError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1

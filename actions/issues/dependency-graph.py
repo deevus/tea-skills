@@ -3,7 +3,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "internal"))
-from tea_api import ApiError, TeaConfigError, RepoContextError, default_adapter, run_action
+from tea_api import ApiError, TeaConfigError, RepoContextError, run_action
+from repo_scope import default_repo_scope
+from issues import dependency_graph_edges
 
 
 def main(argv: list[str]) -> int:
@@ -11,7 +13,7 @@ def main(argv: list[str]) -> int:
         print("usage: dependency-graph", file=sys.stderr)
         return 2
     try:
-        edges = default_adapter().dependency_graph_edges()
+        edges = dependency_graph_edges(default_repo_scope())
     except (ApiError, TeaConfigError, RepoContextError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1

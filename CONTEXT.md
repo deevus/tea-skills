@@ -12,6 +12,10 @@ _Avoid_: script, helper, broad command
 An API-backed bundled action that finds an existing pull request from structured repository data without parsing human CLI output.
 _Avoid_: PR creation helper, internal helper, output parser, tea output parser
 
+**Repository scope**:
+A private internal Module that derives repo-scoped Forgejo API access from the current git remote and exposes repository-rooted request operations to domain Implementations.
+_Avoid_: repo helper, public API, repository command
+
 ## Relationships
 
 - A **Bundled action** belongs to exactly one domain folder under `actions/`.
