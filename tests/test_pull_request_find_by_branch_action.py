@@ -43,10 +43,12 @@ class FindPullRequestByBranchActionTests(unittest.TestCase):
         stdout = io.StringIO()
         stderr = io.StringIO()
 
-        with mock.patch.object(module, "default_adapter", return_value=fake_adapter), \
-            mock.patch("subprocess.run", return_value=branch), \
-            contextlib.redirect_stdout(stdout), \
-            contextlib.redirect_stderr(stderr):
+        with (
+            mock.patch.object(module, "default_adapter", return_value=fake_adapter),
+            mock.patch("subprocess.run", return_value=branch),
+            contextlib.redirect_stdout(stdout),
+            contextlib.redirect_stderr(stderr),
+        ):
             exit_code = module.main([])
 
         self.assertEqual(exit_code, 0)
@@ -58,12 +60,29 @@ class FindPullRequestByBranchActionTests(unittest.TestCase):
         module = load_action_module()
         fake_adapter = mock.Mock()
         fake_adapter.find_pull_requests_by_branch.return_value = [
-            {"number": 12, "url": "https://forge.example/pulls/12", "title": "A", "state": "open", "head": {"owner": "o", "branch": "f"}, "base": {"owner": "o", "branch": "main"}},
-            {"number": 13, "url": "https://forge.example/pulls/13", "title": "B", "state": "open", "head": {"owner": "o", "branch": "f"}, "base": {"owner": "o", "branch": "develop"}},
+            {
+                "number": 12,
+                "url": "https://forge.example/pulls/12",
+                "title": "A",
+                "state": "open",
+                "head": {"owner": "o", "branch": "f"},
+                "base": {"owner": "o", "branch": "main"},
+            },
+            {
+                "number": 13,
+                "url": "https://forge.example/pulls/13",
+                "title": "B",
+                "state": "open",
+                "head": {"owner": "o", "branch": "f"},
+                "base": {"owner": "o", "branch": "develop"},
+            },
         ]
         stdout = io.StringIO()
 
-        with mock.patch.object(module, "default_adapter", return_value=fake_adapter), contextlib.redirect_stdout(stdout):
+        with (
+            mock.patch.object(module, "default_adapter", return_value=fake_adapter),
+            contextlib.redirect_stdout(stdout),
+        ):
             exit_code = module.main(["--head", "feature", "--state", "all"])
 
         self.assertEqual(exit_code, 0)
@@ -78,9 +97,11 @@ class FindPullRequestByBranchActionTests(unittest.TestCase):
         stdout = io.StringIO()
         stderr = io.StringIO()
 
-        with mock.patch.object(module, "default_adapter", return_value=fake_adapter), \
-            contextlib.redirect_stdout(stdout), \
-            contextlib.redirect_stderr(stderr):
+        with (
+            mock.patch.object(module, "default_adapter", return_value=fake_adapter),
+            contextlib.redirect_stdout(stdout),
+            contextlib.redirect_stderr(stderr),
+        ):
             exit_code = module.main(["--head", "missing"])
 
         self.assertEqual(exit_code, 1)
@@ -149,8 +170,10 @@ class FindPullRequestByBranchActionTests(unittest.TestCase):
         for exception in cases:
             with self.subTest(exception=exception.__class__.__name__):
                 stderr = io.StringIO()
-                with mock.patch.object(module, "default_adapter", side_effect=exception), \
-                    contextlib.redirect_stderr(stderr):
+                with (
+                    mock.patch.object(module, "default_adapter", side_effect=exception),
+                    contextlib.redirect_stderr(stderr),
+                ):
                     exit_code = module.main(["--head", "feature"])
 
                 self.assertEqual(exit_code, 1)

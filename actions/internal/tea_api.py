@@ -10,7 +10,6 @@ import os
 from pathlib import Path
 import re
 import subprocess
-import sys
 from typing import Any, Callable, Mapping
 from urllib import parse, request
 from urllib.error import HTTPError, URLError
@@ -57,7 +56,6 @@ class BytesBody:
 
     def read(self) -> bytes:
         return self._data
-
 
     def close(self) -> None:
         pass
@@ -289,7 +287,6 @@ class GiteaAdapter:
                     edges.append((number, int(dep_number)))
         return edges
 
-
     def find_milestone_id_by_name(self, name: str) -> int:
         result = self.get_repo("milestones", {"name": name})
         if not isinstance(result, list) or not result:
@@ -360,7 +357,11 @@ class GiteaAdapter:
         number = int(pull.get("number") or pull.get("index"))
         return {
             "number": number,
-            "url": str(pull.get("html_url") or pull.get("url") or f"{self.config.base_url}/{self.repo.owner}/{self.repo.repo}/pulls/{number}"),
+            "url": str(
+                pull.get("html_url")
+                or pull.get("url")
+                or f"{self.config.base_url}/{self.repo.owner}/{self.repo.repo}/pulls/{number}"
+            ),
             "title": str(pull.get("title") or ""),
             "state": str(pull.get("state") or ""),
             "head": self._branch_record(head, default_owner=self.repo.owner),
@@ -375,7 +376,6 @@ class GiteaAdapter:
             return {"owner": owner, "branch": branch}
         return {"owner": default_owner, "branch": ref or label}
 
-
     def enable_pull_request_automerge(self, pr: int, style: str = "squash", message: str = "") -> None:
         body: dict[str, Any] = {"Do": style, "merge_when_checks_succeed": True}
         if message:
@@ -384,7 +384,6 @@ class GiteaAdapter:
 
     def cancel_pull_request_automerge(self, pr: int) -> None:
         self.delete_repo(f"pulls/{pr}/merge")
-
 
     def request_json(self, method: str, url: str, body: Mapping[str, Any] | None = None) -> Any:
         data = None

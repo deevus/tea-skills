@@ -21,7 +21,6 @@ def e2e_run_id() -> str:
     return create_run_id()
 
 
-
 def e2e_run_root(run_id: str) -> Path:
     base = Path(os.environ.get("TEA_SKILLS_E2E_ARTIFACT_DIR", ROOT / ".e2e-artifacts"))
     return prepare_run_root(base, run_id)
@@ -35,10 +34,8 @@ def e2e_real_tea() -> Path:
     return require_executable("tea")
 
 
-
 def e2e_agent_env(spy: CommandSpy) -> dict[str, str]:
     return env_with_path_prepend(spy.path_prefix, os.environ)
-
 
 
 def make_agent_adapter():

@@ -5,16 +5,47 @@ from typing import Any
 from dokimasia.core.model import AuditEvent
 
 _MUTATING_TEA_VERBS = {
-    "create", "edit", "close", "reopen", "delete", "del", "rm", "merge", "approve", "reject", "review"
+    "create",
+    "edit",
+    "close",
+    "reopen",
+    "delete",
+    "del",
+    "rm",
+    "merge",
+    "approve",
+    "reject",
+    "review",
 }
-_MUTATING_ACTION_WORDS = {
-    "add", "remove", "edit", "lock", "unlock", "pin", "unpin", "create", "set", "cancel"
-}
+_MUTATING_ACTION_WORDS = {"add", "remove", "edit", "lock", "unlock", "pin", "unpin", "create", "set", "cancel"}
 _TEA_VALUE_OPTIONS = {
-    "--add-assignees", "--add-labels", "--assignee", "--assignees", "--author", "--base", "--body",
-    "--deadline", "--description", "--fields", "--head", "--keyword", "--kind", "--labels", "--login",
-    "--milestone", "--milestones", "--output", "--remote", "--remove-assignees", "--remove-labels",
-    "--repo", "--state", "--title", "-R", "-o", "-r",
+    "--add-assignees",
+    "--add-labels",
+    "--assignee",
+    "--assignees",
+    "--author",
+    "--base",
+    "--body",
+    "--deadline",
+    "--description",
+    "--fields",
+    "--head",
+    "--keyword",
+    "--kind",
+    "--labels",
+    "--login",
+    "--milestone",
+    "--milestones",
+    "--output",
+    "--remote",
+    "--remove-assignees",
+    "--remove-labels",
+    "--repo",
+    "--state",
+    "--title",
+    "-R",
+    "-o",
+    "-r",
 }
 _TEA_COMMAND_ALIASES = {
     "i": "issues",
@@ -31,7 +62,7 @@ _TEA_VERB_ALIASES = {
 def _clean_action_root(action: str) -> str:
     clean = action.removesuffix(".py")
     if clean.startswith("actions/"):
-        clean = clean[len("actions/"):]
+        clean = clean[len("actions/") :]
     return "action." + clean.replace("/", ".")
 
 

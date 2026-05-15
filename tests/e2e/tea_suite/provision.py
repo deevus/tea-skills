@@ -23,8 +23,6 @@ class ForgejoRun:
     config: TeaConfig
 
 
-
-
 def assert_safe_e2e_resource(name: str, run_id: str) -> None:
     assert_scoped_disposable_name(name, required_prefix="tea-e2e-", run_id=run_id)
 
@@ -67,7 +65,9 @@ def create_org_and_repo(root: Path, run_id: str) -> ForgejoRun:
             raise RuntimeError("created repository did not include a clone_url or ssh_url")
         workspace.parent.mkdir(parents=True, exist_ok=True)
         subprocess.run(["git", "clone", clone_url, str(workspace)], check=True)
-        (workspace / "AGENTS.md").write_text("# Repository context\n\nThis repository is hosted on Forgejo.\n", encoding="utf-8")
+        (workspace / "AGENTS.md").write_text(
+            "# Repository context\n\nThis repository is hosted on Forgejo.\n", encoding="utf-8"
+        )
         return ForgejoRun(run_id, org, repo, clone_url, workspace, artifact_dir, config)
     except Exception:
         if org_created:

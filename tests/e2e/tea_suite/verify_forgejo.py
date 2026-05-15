@@ -17,7 +17,9 @@ def list_issues(config: TeaConfig, org: str, repo: str) -> list[dict[str, Any]]:
     return result if isinstance(result, list) else []
 
 
-def verify_issue_expectation(expectation: dict[str, Any], ctx: RunContext, issues: list[dict[str, Any]]) -> dict[str, Any]:
+def verify_issue_expectation(
+    expectation: dict[str, Any], ctx: RunContext, issues: list[dict[str, Any]]
+) -> dict[str, Any]:
     match = expectation.get("match", {})
     assertions = expectation.get("assert", {})
     candidates = issues

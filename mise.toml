@@ -1,0 +1,22 @@
+[tools]
+hk = "latest"
+pkl = "latest"
+ruff = "latest"
+
+[env]
+HK_MISE = "1"
+
+[hooks]
+postinstall = "hk install --mise"
+
+[tasks.lint]
+description = "Run ruff lint and format checks through hk"
+run = "hk check --all"
+
+[tasks.format]
+description = "Apply ruff lint fixes and formatting through hk"
+run = "hk fix --all"
+
+[tasks.pre-commit]
+description = "Run the configured pre-commit hook"
+run = "hk run pre-commit"

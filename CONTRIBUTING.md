@@ -18,6 +18,18 @@ Do not require users to `cd` into this plugin or add `actions/` to `PATH`. Actio
 
 Contributor docs for the opt-in live agent E2E harness live in [`tests/e2e/README.md`](tests/e2e/README.md).
 
+## Development tooling
+
+This repository uses [mise](https://mise.jdx.dev/) to provision `ruff` and [hk](https://hk.jdx.dev/) for hook orchestration.
+
+```bash
+mise install
+mise run lint
+mise run format
+```
+
+`mise install` installs hk hooks with `hk install --mise`; `mise run lint` runs `hk check --all`, and `mise run format` runs `hk fix --all`.
+
 ## Repository structure
 
 ```text

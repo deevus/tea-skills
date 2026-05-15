@@ -1,0 +1,27 @@
+amends "package://github.com/jdx/hk/releases/download/v1.45.0/hk@1.45.0#/Config.pkl"
+import "package://github.com/jdx/hk/releases/download/v1.45.0/hk@1.45.0#/Builtins.pkl"
+
+local python_steps = new Mapping<String, Step> {
+  ["ruff"] = Builtins.ruff
+  ["ruff_format"] = (Builtins.ruff_format) {
+    depends = "ruff"
+  }
+}
+
+hooks {
+  ["pre-commit"] {
+    fix = true
+    stash = "git"
+    steps = python_steps
+  }
+  ["pre-push"] {
+    steps = python_steps
+  }
+  ["check"] {
+    steps = python_steps
+  }
+  ["fix"] {
+    fix = true
+    steps = python_steps
+  }
+}

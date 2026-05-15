@@ -29,10 +29,7 @@ class TeaApiCoreTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             config = Path(tmp) / "config.yml"
             config.write_text(
-                "logins:\n"
-                "  - name: main\n"
-                "    url: https://forge.example\n"
-                "    token: abc123\n",
+                "logins:\n  - name: main\n    url: https://forge.example\n    token: abc123\n",
                 encoding="utf-8",
             )
             result = tea_api.read_tea_config(config)
@@ -117,7 +114,6 @@ class TeaApiCoreTests(unittest.TestCase):
         with mock.patch("subprocess.run", return_value=completed):
             self.assertEqual(tea_api.discover_repo_context(), tea_api.RepoContext("owner", "repo"))
 
-
     def test_edit_issue_comment_sends_body(self):
         calls = []
         adapter = tea_api.GiteaAdapter(
@@ -162,8 +158,6 @@ class TeaApiCoreTests(unittest.TestCase):
             opener=opener,
         )
         self.assertEqual(adapter.ready_issues(), [{"number": 1, "state": "open", "title": "Ready"}])
-
-
 
     def test_find_milestone_id_by_name_uses_query_encoding(self):
         captured = {}
@@ -317,7 +311,6 @@ class TeaApiCoreTests(unittest.TestCase):
 
         self.assertEqual([match["number"] for match in matches], [12])
         self.assertEqual(matches[0]["head"], {"owner": "contributor", "branch": "feature"})
-
 
     def test_audit_action_noops_without_env(self):
         with tempfile.TemporaryDirectory() as tmp:

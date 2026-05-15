@@ -32,11 +32,15 @@ class HarnessUnitTests(unittest.TestCase):
             defaults = root / "defaults.json"
             scenarios = root / "scenarios.json"
             defaults.write_text(
-                json.dumps({"execution": {"timeout_seconds": 10}, "expect_audit": {"budgets": {"total_commands": {"max": 5}}}}),
+                json.dumps(
+                    {"execution": {"timeout_seconds": 10}, "expect_audit": {"budgets": {"total_commands": {"max": 5}}}}
+                ),
                 encoding="utf-8",
             )
             scenarios.write_text(
-                json.dumps({"scenarios": [{"name": "one", "prompt": "Run {{ run.id }}", "expect_trace": {"events": []}}]}),
+                json.dumps(
+                    {"scenarios": [{"name": "one", "prompt": "Run {{ run.id }}", "expect_trace": {"events": []}}]}
+                ),
                 encoding="utf-8",
             )
             loaded = load_scenarios(scenarios, defaults)
@@ -86,36 +90,42 @@ class HarnessUnitTests(unittest.TestCase):
     def test_normalize_tea_event_classifies_issue_create_as_mutation(self):
         from tests.e2e.tea_suite.normalize import normalize_raw_audit_event
 
-        event = normalize_raw_audit_event({
-            "source": "tea",
-            "argv": ["issues", "create", "--title", "Hello"],
-            "cwd": "/repo",
-            "exit_code": 0,
-        })
+        event = normalize_raw_audit_event(
+            {
+                "source": "tea",
+                "argv": ["issues", "create", "--title", "Hello"],
+                "cwd": "/repo",
+                "exit_code": 0,
+            }
+        )
         self.assertEqual(event.root, "tea.issues.create")
         self.assertTrue(event.mutates)
 
     def test_normalize_tea_event_handles_command_options_before_subcommand(self):
         from tests.e2e.tea_suite.normalize import normalize_raw_audit_event
 
-        event = normalize_raw_audit_event({
-            "source": "tea",
-            "argv": ["issues", "--repo", "foo/bar", "create", "--title", "Hello"],
-            "cwd": "/repo",
-            "exit_code": 0,
-        })
+        event = normalize_raw_audit_event(
+            {
+                "source": "tea",
+                "argv": ["issues", "--repo", "foo/bar", "create", "--title", "Hello"],
+                "cwd": "/repo",
+                "exit_code": 0,
+            }
+        )
         self.assertEqual(event.root, "tea.issues.create")
         self.assertTrue(event.mutates)
 
     def test_normalize_tea_event_canonicalizes_aliases(self):
         from tests.e2e.tea_suite.normalize import normalize_raw_audit_event
 
-        event = normalize_raw_audit_event({
-            "source": "tea",
-            "argv": ["issue", "c", "--title", "Hello"],
-            "cwd": "/repo",
-            "exit_code": 0,
-        })
+        event = normalize_raw_audit_event(
+            {
+                "source": "tea",
+                "argv": ["issue", "c", "--title", "Hello"],
+                "cwd": "/repo",
+                "exit_code": 0,
+            }
+        )
         self.assertEqual(event.root, "tea.issues.create")
         self.assertTrue(event.mutates)
 
@@ -131,25 +141,29 @@ class HarnessUnitTests(unittest.TestCase):
         ]
         for argv, root in cases:
             with self.subTest(argv=argv):
-                event = normalize_raw_audit_event({
-                    "source": "tea",
-                    "argv": argv,
-                    "cwd": "/repo",
-                    "exit_code": 0,
-                })
+                event = normalize_raw_audit_event(
+                    {
+                        "source": "tea",
+                        "argv": argv,
+                        "cwd": "/repo",
+                        "exit_code": 0,
+                    }
+                )
                 self.assertEqual(event.root, root)
                 self.assertTrue(event.mutates)
 
     def test_normalize_action_event_uses_action_path(self):
         from tests.e2e.tea_suite.normalize import normalize_raw_audit_event
 
-        event = normalize_raw_audit_event({
-            "source": "tea-skills-action",
-            "action": "actions/issues/dependency-add.py",
-            "argv": ["1", "2"],
-            "cwd": "/repo",
-            "exit_code": 0,
-        })
+        event = normalize_raw_audit_event(
+            {
+                "source": "tea-skills-action",
+                "action": "actions/issues/dependency-add.py",
+                "argv": ["1", "2"],
+                "cwd": "/repo",
+                "exit_code": 0,
+            }
+        )
         self.assertEqual(event.root, "action.issues.dependency-add")
         self.assertTrue(event.mutates)
 
@@ -200,7 +214,6 @@ class HarnessUnitTests(unittest.TestCase):
     def test_local_tea_spy_wrapper_is_removed(self):
         self.assertFalse((test_agent_e2e.ROOT / "tests/e2e/tea_suite/tea_spy.py").exists())
 
-
     def test_live_e2e_requires_tea_through_dokimasia_env_helper(self):
         with mock.patch("tests.e2e.test_agent_e2e.require_executable", return_value=Path("/bin/tea")) as require:
             real_tea = test_agent_e2e.e2e_real_tea()
@@ -219,14 +232,11 @@ class HarnessUnitTests(unittest.TestCase):
         self.assertEqual(env, expected)
         prepend.assert_called_once_with("/spy/bin", os.environ)
 
-
-
     def test_e2e_run_id_uses_dokimasia_layout(self):
         with mock.patch("tests.e2e.test_agent_e2e.create_run_id", return_value="abc123") as create:
             run_id = test_agent_e2e.e2e_run_id()
         self.assertEqual(run_id, "abc123")
         create.assert_called_once_with()
-
 
     def test_e2e_run_root_defaults_to_repo_artifacts_dir(self):
         expected = test_agent_e2e.ROOT / ".e2e-artifacts" / "abc123"
@@ -277,8 +287,18 @@ class HarnessUnitTests(unittest.TestCase):
         from dokimasia.agents.claude_code import parse_claude_stream_json
 
         lines = [
-            json.dumps({"type": "assistant", "message": {"content": [{"type": "text", "text": "Using create-issue to create the issue."}]}}),
-            json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Skill", "input": {"skill": "create-issue"}}]}}),
+            json.dumps(
+                {
+                    "type": "assistant",
+                    "message": {"content": [{"type": "text", "text": "Using create-issue to create the issue."}]},
+                }
+            ),
+            json.dumps(
+                {
+                    "type": "assistant",
+                    "message": {"content": [{"type": "tool_use", "name": "Skill", "input": {"skill": "create-issue"}}]},
+                }
+            ),
         ]
         events = parse_claude_stream_json(lines)
         skills = [event.name for event in events if event.kind == "skill.loaded"]
@@ -312,14 +332,16 @@ class HarnessUnitTests(unittest.TestCase):
     def test_claude_code_adapter_preserves_timeout_bytes_stream_json(self):
         from dokimasia.agents.claude_code import ClaudeCodeAdapter
 
-        stream_line = json.dumps({
-            "type": "assistant",
-            "message": {
-                "content": [
-                    {"type": "text", "text": "Using create-issue to create the issue."},
-                ],
-            },
-        })
+        stream_line = json.dumps(
+            {
+                "type": "assistant",
+                "message": {
+                    "content": [
+                        {"type": "text", "text": "Using create-issue to create the issue."},
+                    ],
+                },
+            }
+        )
         stdout_bytes = f"{stream_line}\n".encode("utf-8")
         stderr_bytes = b"partial stderr"
 
@@ -353,14 +375,16 @@ class HarnessUnitTests(unittest.TestCase):
     def test_claude_code_adapter_preserves_timeout_string_stream_json(self):
         from dokimasia.agents.claude_code import ClaudeCodeAdapter
 
-        stream_line = json.dumps({
-            "type": "assistant",
-            "message": {
-                "content": [
-                    {"type": "text", "text": "Using create-issue to create the issue."},
-                ],
-            },
-        })
+        stream_line = json.dumps(
+            {
+                "type": "assistant",
+                "message": {
+                    "content": [
+                        {"type": "text", "text": "Using create-issue to create the issue."},
+                    ],
+                },
+            }
+        )
         stdout_text = f"{stream_line}\n"
         stderr_text = "partial stderr"
 
@@ -395,15 +419,19 @@ class HarnessUnitTests(unittest.TestCase):
         from dokimasia.agents.pi import parse_pi_json_events
 
         lines = [
-            json.dumps({
-                "type": "tool_execution_start",
-                "toolName": "read",
-                "args": {"path": "/repo/skills/create-issue/SKILL.md"},
-            }),
-            json.dumps({
-                "type": "message_update",
-                "assistantMessageEvent": {"type": "text_delta", "delta": "Using create-issue"},
-            }),
+            json.dumps(
+                {
+                    "type": "tool_execution_start",
+                    "toolName": "read",
+                    "args": {"path": "/repo/skills/create-issue/SKILL.md"},
+                }
+            ),
+            json.dumps(
+                {
+                    "type": "message_update",
+                    "assistantMessageEvent": {"type": "text_delta", "delta": "Using create-issue"},
+                }
+            ),
         ]
         events = parse_pi_json_events(lines, skills_dir=Path("/repo/skills"))
         skills = [event.name for event in events if event.kind == "skill.loaded"]
@@ -413,11 +441,13 @@ class HarnessUnitTests(unittest.TestCase):
         from dokimasia.agents.pi import parse_pi_json_events
 
         lines = [
-            json.dumps({
-                "type": "tool_execution_start",
-                "toolName": "read",
-                "args": {"path": "/old/global/skills/create-issue/SKILL.md"},
-            }),
+            json.dumps(
+                {
+                    "type": "tool_execution_start",
+                    "toolName": "read",
+                    "args": {"path": "/old/global/skills/create-issue/SKILL.md"},
+                }
+            ),
         ]
         events = parse_pi_json_events(lines, skills_dir=Path("/repo/skills"))
         self.assertEqual([event for event in events if event.kind == "skill.loaded"], [])
@@ -468,7 +498,6 @@ class HarnessUnitTests(unittest.TestCase):
 
         guard.assert_called_once_with("tea-e2e-abc123", required_prefix="tea-e2e-", run_id="abc123")
 
-
     def test_create_org_and_repo_writes_local_context_without_pushing(self):
         from actions.internal.tea_api import TeaConfig
         from tests.e2e.tea_suite import provision
@@ -489,9 +518,14 @@ class HarnessUnitTests(unittest.TestCase):
             return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
 
         with tempfile.TemporaryDirectory() as tmp:
-            with mock.patch("tests.e2e.tea_suite.provision.read_tea_config", return_value=TeaConfig("token", "https://forgejo.test")), \
-                 mock.patch("tests.e2e.tea_suite.provision.api_request", side_effect=fake_api), \
-                 mock.patch("tests.e2e.tea_suite.provision.subprocess.run", side_effect=fake_run):
+            with (
+                mock.patch(
+                    "tests.e2e.tea_suite.provision.read_tea_config",
+                    return_value=TeaConfig("token", "https://forgejo.test"),
+                ),
+                mock.patch("tests.e2e.tea_suite.provision.api_request", side_effect=fake_api),
+                mock.patch("tests.e2e.tea_suite.provision.subprocess.run", side_effect=fake_run),
+            ):
                 run = provision.create_org_and_repo(Path(tmp), "abc123")
                 self.assertEqual(run.org, "tea-e2e-abc123")
                 self.assertTrue((run.workspace / "AGENTS.md").exists())
@@ -514,9 +548,14 @@ class HarnessUnitTests(unittest.TestCase):
             raise subprocess.CalledProcessError(128, command)
 
         with tempfile.TemporaryDirectory() as tmp:
-            with mock.patch("tests.e2e.tea_suite.provision.read_tea_config", return_value=TeaConfig("token", "https://forgejo.test")), \
-                 mock.patch("tests.e2e.tea_suite.provision.api_request", side_effect=fake_api), \
-                 mock.patch("tests.e2e.tea_suite.provision.subprocess.run", side_effect=fake_run):
+            with (
+                mock.patch(
+                    "tests.e2e.tea_suite.provision.read_tea_config",
+                    return_value=TeaConfig("token", "https://forgejo.test"),
+                ),
+                mock.patch("tests.e2e.tea_suite.provision.api_request", side_effect=fake_api),
+                mock.patch("tests.e2e.tea_suite.provision.subprocess.run", side_effect=fake_run),
+            ):
                 with self.assertRaises(subprocess.CalledProcessError):
                     provision.create_org_and_repo(Path(tmp), "abc123")
 
@@ -533,7 +572,11 @@ class HarnessUnitTests(unittest.TestCase):
             ctx = RunContext("run", "org", "repo", workspace)
             issues = [{"number": 1, "title": "Title", "body": "body marker", "state": "open", "labels": []}]
             result = verify_issue_expectation(
-                {"id": "main", "match": {"title": "Title"}, "assert": {"count": 1, "state": "open", "body_equals_file": "issue-body.md"}},
+                {
+                    "id": "main",
+                    "match": {"title": "Title"},
+                    "assert": {"count": 1, "state": "open", "body_equals_file": "issue-body.md"},
+                },
                 ctx,
                 issues,
             )
@@ -596,7 +639,6 @@ class HarnessUnitTests(unittest.TestCase):
             )
             result = ScenarioRunner(FakeAdapter(), lambda raw: raw, lambda expectations, ctx: []).run(scenario, ctx, {})
             self.assertTrue(result.passed, result.message)
-
 
     def test_issue_verifier_supports_zero_count_assertion(self):
         from dokimasia.core.model import RunContext
