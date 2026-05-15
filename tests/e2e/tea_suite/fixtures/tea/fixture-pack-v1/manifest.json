@@ -1,0 +1,11 @@
+{
+  "fixture_pack": "fixture-pack-v1",
+  "tea_cli_compatibility": "mocked tea issue workflow output for tea-skills E2E",
+  "template_syntax": "Python str.format placeholders",
+  "commands": {
+    "logins": {"stdout": "logins.stdout.txt", "exit_code": 0},
+    "issues create": {"stdout": "issues/create.success.stdout.txt", "exit_code": 0, "mutates": "create_issue"},
+    "issues list -o simple": {"stdout": "issues/list.simple.stdout.txt", "exit_code": 0},
+    "issues show": {"stdout": "issues/show.stdout.txt", "exit_code": 0}
+  }
+}

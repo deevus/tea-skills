@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import os
+import subprocess
 from pathlib import Path
 from unittest import mock
 
@@ -142,3 +144,116 @@ def test_list_issues_returns_empty_list_for_non_list_response():
             verify_forgejo.list_issues(TeaConfig(token="token", base_url="https://forgejo.example"), "org", "repo")
             == []
         )
+
+
+def test_create_mock_tea_builds_executable_state_and_env(tmp_path):
+    from tests.e2e.tea_suite.mock_tea import create_mock_tea
+
+    mock_tea = create_mock_tea(tmp_path / "mock-tea")
+
+    assert mock_tea.executable.exists()
+    assert mock_tea.executable.name == "tea"
+    assert mock_tea.state_path.exists()
+    assert json.loads(mock_tea.state_path.read_text(encoding="utf-8")) == {"next_issue_number": 1, "issues": []}
+
+    env = mock_tea.env_with_path({"PATH": "/usr/bin"})
+    assert env["PATH"].split(os.pathsep)[0] == str(mock_tea.bin_dir)
+    assert env["TEA_SKILLS_MOCK_TEA_STATE"] == str(mock_tea.state_path)
+    assert env["TEA_SKILLS_MOCK_TEA_FIXTURES"] == str(mock_tea.fixture_pack_dir)
+
+
+def test_mock_tea_creates_issue_and_renders_fixture_output(tmp_path):
+    from tests.e2e.tea_suite.mock_tea import create_mock_tea, load_mock_tea_state
+
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    mock_tea = create_mock_tea(tmp_path / "mock-tea")
+
+    completed = subprocess.run(
+        [
+            str(mock_tea.executable),
+            "issues",
+            "create",
+            "--title",
+            "Mocked issue",
+            "--description",
+            "Body marker",
+        ],
+        cwd=workspace,
+        env=mock_tea.env_with_path(os.environ),
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+
+    assert completed.returncode == 0
+    assert completed.stderr == ""
+    assert "#1 Mocked issue" in completed.stdout
+    assert load_mock_tea_state(mock_tea.state_path) == {
+        "next_issue_number": 2,
+        "issues": [
+            {"number": 1, "title": "Mocked issue", "body": "Body marker", "state": "open"},
+        ],
+    }
+
+
+def test_mock_tea_reads_body_from_body_flag_path(tmp_path):
+    from tests.e2e.tea_suite.mock_tea import create_mock_tea, load_mock_tea_state
+
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    (workspace / "issue-body.md").write_text("Body from file\n", encoding="utf-8")
+    mock_tea = create_mock_tea(tmp_path / "mock-tea")
+
+    completed = subprocess.run(
+        [str(mock_tea.executable), "issue", "c", "--title", "File body", "--body", "issue-body.md"],
+        cwd=workspace,
+        env=mock_tea.env_with_path(os.environ),
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+
+    assert completed.returncode == 0
+    state = load_mock_tea_state(mock_tea.state_path)
+    assert state["issues"][0]["body"] == "Body from file\n"
+
+
+def test_mock_tea_lists_and_shows_issues_from_state(tmp_path):
+    from tests.e2e.tea_suite.mock_tea import create_mock_tea
+
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    mock_tea = create_mock_tea(tmp_path / "mock-tea")
+    env = mock_tea.env_with_path(os.environ)
+
+    subprocess.run(
+        [str(mock_tea.executable), "issues", "create", "--title", "Visible", "--description", "Visible body"],
+        cwd=workspace,
+        env=env,
+        check=True,
+    )
+    listed = subprocess.run(
+        [str(mock_tea.executable), "issues", "list", "-o", "simple"],
+        cwd=workspace,
+        env=env,
+        text=True,
+        stdout=subprocess.PIPE,
+        check=False,
+    )
+    shown = subprocess.run(
+        [str(mock_tea.executable), "issues", "show", "1"],
+        cwd=workspace,
+        env=env,
+        text=True,
+        stdout=subprocess.PIPE,
+        check=False,
+    )
+
+    assert listed.returncode == 0
+    assert "#1 Visible open" in listed.stdout
+    assert shown.returncode == 0
+    assert "Title: Visible" in shown.stdout
+    assert "Visible body" in shown.stdout
