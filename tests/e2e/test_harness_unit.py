@@ -45,6 +45,22 @@ class HarnessUnitTests(unittest.TestCase):
             self.assertEqual(loaded[0].execution["timeout_seconds"], 10)
             self.assertEqual(loaded[0].expect_audit["budgets"]["total_commands"], {"max": 5})
 
+    def test_readme_documents_dokimasia_suite_boundary(self):
+        text = (test_agent_e2e.ROOT / "README.md").read_text(encoding="utf-8")
+
+        self.assertIn("Dokimasia suite helpers", text)
+        for module in [
+            "dokimasia.suite.spy",
+            "dokimasia.suite.layout",
+            "dokimasia.suite.safety",
+            "dokimasia.suite.env",
+        ]:
+            with self.subTest(module=module):
+                self.assertIn(module, text)
+        self.assertIn("Forgejo provisioning", text)
+        self.assertIn("tea audit normalization", text)
+        self.assertIn("state verification remain in tea-skills", text)
+
     def test_run_context_template_data_includes_outputs(self):
         ctx = RunContext(run_id="run-1", org="tea-e2e-run-1", repo="repo", workspace=Path("/tmp/repo"))
         ctx.outputs["issue_number"] = 7

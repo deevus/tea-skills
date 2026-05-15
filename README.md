@@ -87,6 +87,18 @@ TEA_SKILLS_E2E=1 TEA_SKILLS_E2E_KEEP_REMOTE=1 python -m unittest tests.e2e.test_
 
 The harness records agent traces, `tea` calls, and bundled action calls under the run artifact directory, then verifies Forgejo state against the live server. Failure messages include the scenario artifact path. Scenario prompts do not mention skills, `tea`, bundled actions, or forbidden alternatives; skill discovery is part of what the test verifies.
 
+
+### Dokimasia suite boundary
+
+The live E2E harness uses Dokimasia suite helpers for generic suite assembly mechanics:
+
+- `dokimasia.suite.layout` creates run ids and artifact directories.
+- `dokimasia.suite.spy` creates the audited command wrapper used to observe host CLI calls.
+- `dokimasia.suite.safety` enforces caller-supplied disposable-resource cleanup policy.
+- `dokimasia.suite.env` prepends spy directories to `PATH` and discovers required executables.
+
+Forgejo provisioning, tea audit normalization, and state verification remain in tea-skills under `tests/e2e/tea_suite/`. Tea-skills owns the project-specific resource names, executable choices, audit roots, and Forgejo assertions; Dokimasia owns only the generic helpers those pieces compose with.
+
 ## Installation
 
 Install as a Claude Code plugin:
