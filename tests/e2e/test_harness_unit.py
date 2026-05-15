@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
+import uuid
 from pathlib import Path
 from unittest import mock
 
@@ -70,6 +72,58 @@ def test_mock_e2e_uses_bundled_mock_tea():
 
     assert test_agent_e2e.MockTea is MockTea
     assert test_agent_e2e.create_mock_tea is create_mock_tea
+
+
+def test_mock_e2e_workspace_is_hermetic_git_repo(tmp_path):
+    workspace = tmp_path / "workspace" / "repo"
+
+    test_agent_e2e.prepare_mock_workspace(workspace)
+
+    top_level = subprocess.run(
+        ["git", "-C", str(workspace), "rev-parse", "--show-toplevel"],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=True,
+    )
+    origin = subprocess.run(
+        ["git", "-C", str(workspace), "remote", "get-url", "origin"],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=True,
+    )
+
+    assert Path(top_level.stdout.strip()) == workspace.resolve()
+    assert origin.stdout.strip() == test_agent_e2e.MOCK_ORIGIN_URL
+
+
+def test_session_hook_in_mock_workspace_does_not_use_parent_repo_context():
+    from tests.e2e.tea_suite.mock_tea import create_mock_tea
+
+    run_root = test_agent_e2e.ROOT / ".e2e-artifacts" / f"unit-hermetic-{uuid.uuid4().hex}"
+    workspace = run_root / "workspace" / "repo"
+    try:
+        test_agent_e2e.prepare_mock_workspace(workspace)
+        mock_tea = create_mock_tea(run_root / "mock-tea")
+
+        completed = subprocess.run(
+            ["bash", str(test_agent_e2e.ROOT / "hooks" / "session-start.sh")],
+            cwd=workspace,
+            env=mock_tea.env_with_path(os.environ),
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+
+        assert completed.returncode == 0
+        assert completed.stderr == ""
+        assert "forgejo.tail9a847c.ts.net" not in completed.stdout
+        assert "WORKTREE DETECTED" not in completed.stdout
+        assert "tea CLI is configured and ready." in completed.stdout
+    finally:
+        shutil.rmtree(run_root, ignore_errors=True)
 
 
 def test_issue_title_and_body_include_run_id():

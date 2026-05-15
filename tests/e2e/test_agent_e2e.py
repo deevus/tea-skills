@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -16,6 +17,7 @@ from tests.e2e.tea_suite.mock_tea import MockTea, create_mock_tea
 ROOT = Path(__file__).resolve().parents[2]
 TEA = cmd.spy("tea")
 ISSUE_CREATE = TEA.match(pattern=[("issues", "issue", "i"), ("create", "c")])
+MOCK_ORIGIN_URL = "https://mock.invalid/sh/mock-repo.git"
 
 
 @dataclass(frozen=True)
@@ -58,6 +60,29 @@ def make_agent_adapter():
     raise ValueError(f"unknown TEA_SKILLS_E2E_AGENT: {agent}")
 
 
+def prepare_mock_workspace(workspace: Path) -> None:
+    workspace.mkdir(parents=True, exist_ok=True)
+    (workspace / "AGENTS.md").write_text(
+        "# Repository context\n\nThis repository is hosted on Forgejo. Use tea for issue workflows.\n",
+        encoding="utf-8",
+    )
+    subprocess.run(["git", "init", "-q"], cwd=workspace, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    subprocess.run(
+        ["git", "remote", "remove", "origin"],
+        cwd=workspace,
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    subprocess.run(
+        ["git", "remote", "add", "origin", MOCK_ORIGIN_URL],
+        cwd=workspace,
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+
 def assert_single_issue_matches(issues: list[dict[str, Any]], *, title: str, body: str) -> None:
     candidates = [issue for issue in issues if issue.get("title") == title]
     assert len(candidates) == 1, f"expected exactly one issue titled {title!r}, found {len(candidates)}"
@@ -77,12 +102,8 @@ def mock_tea_run(mock_run_id: str) -> MockTeaRun:
     root = e2e_run_root(mock_run_id)
     workspace = root / "workspace" / "repo"
     artifact_dir = root / "artifacts"
-    workspace.mkdir(parents=True, exist_ok=True)
+    prepare_mock_workspace(workspace)
     artifact_dir.mkdir(parents=True, exist_ok=True)
-    (workspace / "AGENTS.md").write_text(
-        "# Repository context\n\nThis repository is hosted on Forgejo. Use tea for issue workflows.\n",
-        encoding="utf-8",
-    )
     return MockTeaRun(
         run_id=mock_run_id,
         workspace=workspace,

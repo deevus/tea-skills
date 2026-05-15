@@ -1,6 +1,6 @@
 # Add an audited agent E2E harness for Forgejo skills
 
-The project will add an end-to-end integration harness that runs live agent sessions against a local, stateful mock `tea` executable. This ADR is the source of truth for the harness architecture. The companion design spec may add examples and implementation notes, but should not contradict these decisions.
+The project will add an end-to-end integration harness that runs AI-backed agent sessions against a local, stateful mock `tea` executable. This ADR is the source of truth for the harness architecture. The companion design spec may add examples and implementation notes, but should not contradict these decisions.
 
 ## Context
 

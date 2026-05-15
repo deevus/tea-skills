@@ -16,7 +16,7 @@ Do not require users to `cd` into this plugin or add `actions/` to `PATH`. Actio
 
 ## Development testing
 
-Contributor docs for the opt-in live agent E2E harness live in [`tests/e2e/README.md`](tests/e2e/README.md).
+Contributor docs for the AI-backed mock-tea E2E harness live in [`tests/e2e/README.md`](tests/e2e/README.md).
 
 ## Development tooling
 
