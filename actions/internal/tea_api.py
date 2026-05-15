@@ -139,13 +139,16 @@ def parse_repo_remote(remote_url: str) -> tuple[str, str]:
 
 
 def discover_repo_context() -> RepoContext:
-    completed = subprocess.run(
-        ["git", "remote", "get-url", "origin"],
-        check=False,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
+    try:
+        completed = subprocess.run(
+            ["git", "remote", "get-url", "origin"],
+            check=False,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+    except OSError as exc:
+        raise RepoContextError(f"failed to read git remote origin: {exc}") from exc
     if completed.returncode != 0:
         raise RepoContextError(completed.stderr.strip() or "failed to read git remote origin")
     owner, repo = parse_repo_remote(completed.stdout)
@@ -321,6 +324,57 @@ class GiteaAdapter:
 
     def create_org_label(self, name: str, color: str, description: str = "") -> Any:
         return self.post_org("labels", {"name": name, "color": color, "description": description})
+
+    def find_pull_requests_by_branch(
+        self,
+        head: str,
+        base: str | None = None,
+        state: str = "open",
+    ) -> list[dict[str, Any]]:
+        query: dict[str, Any] = {"state": state}
+        if base is not None:
+            query["base_branch"] = base
+        result = self.get_repo("pulls", query)
+        pulls = result if isinstance(result, list) else []
+        matches = [pull for pull in pulls if self._pull_head_matches(pull, head)]
+        if base is not None:
+            matches = [pull for pull in matches if self._pull_base_matches(pull, base)]
+        return [self._pull_request_record(pull) for pull in matches]
+
+    def _pull_head_matches(self, pull: Mapping[str, Any], head: str) -> bool:
+        pull_head = pull.get("head") if isinstance(pull.get("head"), Mapping) else {}
+        if ":" in head:
+            return pull_head.get("label") == head
+        return pull_head.get("ref") == head
+
+    def _pull_base_matches(self, pull: Mapping[str, Any], base: str) -> bool:
+        pull_base = pull.get("base") if isinstance(pull.get("base"), Mapping) else {}
+        if pull_base.get("ref") == base:
+            return True
+        label = pull_base.get("label")
+        return isinstance(label, str) and label.split(":", 1)[-1] == base
+
+    def _pull_request_record(self, pull: Mapping[str, Any]) -> dict[str, Any]:
+        head = pull.get("head") if isinstance(pull.get("head"), Mapping) else {}
+        base = pull.get("base") if isinstance(pull.get("base"), Mapping) else {}
+        number = int(pull.get("number") or pull.get("index"))
+        return {
+            "number": number,
+            "url": str(pull.get("html_url") or pull.get("url") or f"{self.config.base_url}/{self.repo.owner}/{self.repo.repo}/pulls/{number}"),
+            "title": str(pull.get("title") or ""),
+            "state": str(pull.get("state") or ""),
+            "head": self._branch_record(head, default_owner=self.repo.owner),
+            "base": self._branch_record(base, default_owner=self.repo.owner),
+        }
+
+    def _branch_record(self, branch_data: Mapping[str, Any], default_owner: str) -> dict[str, str]:
+        label = str(branch_data.get("label") or "")
+        ref = str(branch_data.get("ref") or "")
+        if ":" in label:
+            owner, branch = label.split(":", 1)
+            return {"owner": owner, "branch": branch}
+        return {"owner": default_owner, "branch": ref or label}
+
 
     def enable_pull_request_automerge(self, pr: int, style: str = "squash", message: str = "") -> None:
         body: dict[str, Any] = {"Do": style, "merge_when_checks_succeed": True}

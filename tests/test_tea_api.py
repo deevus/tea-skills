@@ -232,6 +232,92 @@ class TeaApiCoreTests(unittest.TestCase):
             {"Do": "squash", "merge_when_checks_succeed": True, "merge_message_field": "feat: add auth"},
         )
 
+    def test_find_pull_requests_by_branch_filters_head_ref_and_base_branch(self):
+        captured = {}
+        payload = [
+            {
+                "number": 12,
+                "html_url": "https://forge.example/owner/repo/pulls/12",
+                "title": "Feature",
+                "state": "open",
+                "head": {"label": "owner:feature", "ref": "feature"},
+                "base": {"label": "owner:main", "ref": "main"},
+            },
+            {
+                "number": 13,
+                "html_url": "https://forge.example/owner/repo/pulls/13",
+                "title": "Other base",
+                "state": "open",
+                "head": {"label": "owner:feature", "ref": "feature"},
+                "base": {"label": "owner:develop", "ref": "develop"},
+            },
+            {
+                "number": 14,
+                "html_url": "https://forge.example/owner/repo/pulls/14",
+                "title": "Other head",
+                "state": "open",
+                "head": {"label": "owner:other", "ref": "other"},
+                "base": {"label": "owner:main", "ref": "main"},
+            },
+        ]
+
+        def opener(request):
+            captured["url"] = request.full_url
+            return tea_api.FakeHttpResponse(200, payload)
+
+        adapter = tea_api.GiteaAdapter(
+            tea_api.TeaConfig("t", "https://forge.example"),
+            tea_api.RepoContext("owner", "repo"),
+            opener=opener,
+        )
+
+        self.assertEqual(
+            adapter.find_pull_requests_by_branch("feature", base="main", state="open"),
+            [
+                {
+                    "number": 12,
+                    "url": "https://forge.example/owner/repo/pulls/12",
+                    "title": "Feature",
+                    "state": "open",
+                    "head": {"owner": "owner", "branch": "feature"},
+                    "base": {"owner": "owner", "branch": "main"},
+                }
+            ],
+        )
+        self.assertTrue(captured["url"].endswith("/pulls?state=open&base_branch=main"))
+
+    def test_find_pull_requests_by_branch_matches_owner_prefixed_head_label(self):
+        adapter = tea_api.GiteaAdapter(
+            tea_api.TeaConfig("t", "https://forge.example"),
+            tea_api.RepoContext("owner", "repo"),
+            opener=lambda request: tea_api.FakeHttpResponse(
+                200,
+                [
+                    {
+                        "number": 12,
+                        "url": "https://forge.example/owner/repo/pulls/12",
+                        "title": "Fork feature",
+                        "state": "open",
+                        "head": {"label": "contributor:feature", "ref": "feature"},
+                        "base": {"label": "owner:main", "ref": "main"},
+                    },
+                    {
+                        "number": 13,
+                        "url": "https://forge.example/owner/repo/pulls/13",
+                        "title": "Local feature",
+                        "state": "open",
+                        "head": {"label": "owner:feature", "ref": "feature"},
+                        "base": {"label": "owner:main", "ref": "main"},
+                    },
+                ],
+            ),
+        )
+
+        matches = adapter.find_pull_requests_by_branch("contributor:feature", state="all")
+
+        self.assertEqual([match["number"] for match in matches], [12])
+        self.assertEqual(matches[0]["head"], {"owner": "contributor", "branch": "feature"})
+
 
     def test_audit_action_noops_without_env(self):
         with tempfile.TemporaryDirectory() as tmp:

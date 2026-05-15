@@ -21,6 +21,7 @@ EXPECTED_ACTIONS = [
     "actions/issues/dependency-ready.py",
     "actions/issues/dependency-graph.py",
     "actions/pull-requests/set-automerge.py",
+    "actions/pull-requests/find-by-branch.py",
     "actions/milestones/edit.py",
     "actions/org-labels/list.py",
     "actions/org-labels/create.py",
