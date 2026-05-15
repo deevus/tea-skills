@@ -169,16 +169,36 @@ class HarnessUnitTests(unittest.TestCase):
 
 
 
+    def test_e2e_run_id_uses_dokimasia_layout(self):
+        with mock.patch("tests.e2e.test_agent_e2e.create_run_id", return_value="abc123") as create:
+            run_id = test_agent_e2e.e2e_run_id()
+        self.assertEqual(run_id, "abc123")
+        create.assert_called_once_with()
+
+
     def test_e2e_run_root_defaults_to_repo_artifacts_dir(self):
-        with mock.patch.dict(os.environ, {}, clear=True):
-            run_root = test_agent_e2e.e2e_run_root("abc123")
-        self.assertEqual(run_root, test_agent_e2e.ROOT / ".e2e-artifacts" / "abc123")
+        expected = test_agent_e2e.ROOT / ".e2e-artifacts" / "abc123"
+        with mock.patch("tests.e2e.test_agent_e2e.prepare_run_root", return_value=expected) as prepare:
+            with mock.patch.dict(os.environ, {}, clear=True):
+                run_root = test_agent_e2e.e2e_run_root("abc123")
+        self.assertEqual(run_root, expected)
+        prepare.assert_called_once_with(test_agent_e2e.ROOT / ".e2e-artifacts", "abc123")
 
     def test_e2e_run_root_uses_env_artifact_dir(self):
         with tempfile.TemporaryDirectory() as tmp:
-            with mock.patch.dict(os.environ, {"TEA_SKILLS_E2E_ARTIFACT_DIR": tmp}, clear=True):
-                run_root = test_agent_e2e.e2e_run_root("abc123")
-        self.assertEqual(run_root, Path(tmp) / "abc123")
+            expected = Path(tmp) / "abc123"
+            with mock.patch("tests.e2e.test_agent_e2e.prepare_run_root", return_value=expected) as prepare:
+                with mock.patch.dict(os.environ, {"TEA_SKILLS_E2E_ARTIFACT_DIR": tmp}, clear=True):
+                    run_root = test_agent_e2e.e2e_run_root("abc123")
+            self.assertEqual(run_root, expected)
+            prepare.assert_called_once_with(Path(tmp), "abc123")
+
+    def test_e2e_scenario_artifact_dir_uses_dokimasia_layout(self):
+        expected = Path("/run/artifacts/Create-issue")
+        with mock.patch("tests.e2e.test_agent_e2e.prepare_scenario_dir", return_value=expected) as prepare:
+            scenario_dir = test_agent_e2e.e2e_scenario_artifact_dir(Path("/run/artifacts"), "Create issue")
+        self.assertEqual(scenario_dir, expected)
+        prepare.assert_called_once_with(Path("/run/artifacts"), "Create issue")
 
     def test_make_agent_adapter_defaults_to_claude(self):
         from dokimasia.agents.claude_code import ClaudeCodeAdapter

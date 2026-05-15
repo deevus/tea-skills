@@ -8,17 +8,27 @@ from dokimasia.agents.pi import PiAdapter
 from dokimasia.core.model import RunContext
 from dokimasia.core.runner import ScenarioRunner
 from dokimasia.core.scenarios import load_scenarios
-from tests.e2e.tea_suite.normalize import normalize_raw_audit_event
-from tests.e2e.tea_suite.provision import cleanup_run, create_org_and_repo, new_run_id
+from dokimasia.suite.layout import create_run_id, prepare_run_root, prepare_scenario_dir
 from dokimasia.suite.spy import create_spy
+from tests.e2e.tea_suite.normalize import normalize_raw_audit_event
+from tests.e2e.tea_suite.provision import cleanup_run, create_org_and_repo
 from tests.e2e.tea_suite.verify_forgejo import verify_state
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def e2e_run_id() -> str:
+    return create_run_id()
+
+
+
 def e2e_run_root(run_id: str) -> Path:
     base = Path(os.environ.get("TEA_SKILLS_E2E_ARTIFACT_DIR", ROOT / ".e2e-artifacts"))
-    return base / run_id
+    return prepare_run_root(base, run_id)
+
+
+def e2e_scenario_artifact_dir(parent: Path, scenario_name: str) -> Path:
+    return prepare_scenario_dir(parent, scenario_name)
 
 
 def make_agent_adapter():
@@ -35,16 +45,15 @@ class TeaSkillsAgentE2ETests(unittest.TestCase):
     def test_create_issue_scenario(self):
         real_tea = shutil.which("tea")
         self.assertIsNotNone(real_tea, "tea must be installed")
-        run_id = new_run_id()
+        run_id = e2e_run_id()
         root = e2e_run_root(run_id)
-        root.mkdir(parents=True, exist_ok=True)
         run = create_org_and_repo(root, run_id)
         try:
             scenario_path = ROOT / "tests/e2e/tea_suite/scenarios/issues.yaml"
             defaults_path = ROOT / "tests/e2e/tea_suite/defaults.yaml"
             scenario = load_scenarios(scenario_path, defaults_path)[0]
             ctx = RunContext(run.run_id, run.org, run.repo, run.workspace, run.artifact_dir)
-            scenario_artifacts = run.artifact_dir / scenario.name.replace(" ", "-")
+            scenario_artifacts = e2e_scenario_artifact_dir(run.artifact_dir, scenario.name)
             spy = create_spy(
                 root=root / "spy",
                 executable_name="tea",

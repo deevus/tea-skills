@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
-import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -23,8 +22,6 @@ class ForgejoRun:
     config: TeaConfig
 
 
-def new_run_id() -> str:
-    return str(int(time.time()))
 
 
 def assert_safe_e2e_resource(name: str, run_id: str) -> None:
