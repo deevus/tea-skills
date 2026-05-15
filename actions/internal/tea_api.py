@@ -166,7 +166,6 @@ class GiteaAdapter:
     def api_root(self) -> str:
         return f"{self.config.base_url}/api/v1"
 
-
     def request_json(self, method: str, url: str, body: Mapping[str, Any] | None = None) -> Any:
         data = None
         headers = {"Authorization": f"token {self.config.token}", "Accept": "application/json"}

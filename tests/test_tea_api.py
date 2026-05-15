@@ -261,7 +261,8 @@ class TeaApiCoreTests(unittest.TestCase):
         self.assertTrue(captured["url"].endswith("/pulls?state=open&base_branch=main"))
 
     def test_find_pull_requests_by_branch_matches_owner_prefixed_head_label(self):
-        scope = self.make_repo_scope(lambda request: tea_api.FakeHttpResponse(
+        scope = self.make_repo_scope(
+            lambda request: tea_api.FakeHttpResponse(
                 200,
                 [
                     {
