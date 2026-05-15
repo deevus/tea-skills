@@ -45,8 +45,15 @@ class HarnessUnitTests(unittest.TestCase):
             self.assertEqual(loaded[0].execution["timeout_seconds"], 10)
             self.assertEqual(loaded[0].expect_audit["budgets"]["total_commands"], {"max": 5})
 
-    def test_readme_documents_dokimasia_suite_boundary(self):
+    def test_readme_points_to_e2e_docs_without_inline_harness_details(self):
         text = (test_agent_e2e.ROOT / "README.md").read_text(encoding="utf-8")
+
+        self.assertIn("tests/e2e/README.md", text)
+        self.assertNotIn("Dokimasia suite boundary", text)
+        self.assertNotIn("TEA_SKILLS_E2E=1", text)
+
+    def test_e2e_readme_documents_dokimasia_suite_boundary(self):
+        text = (test_agent_e2e.ROOT / "tests/e2e/README.md").read_text(encoding="utf-8")
 
         self.assertIn("Dokimasia suite helpers", text)
         for module in [
