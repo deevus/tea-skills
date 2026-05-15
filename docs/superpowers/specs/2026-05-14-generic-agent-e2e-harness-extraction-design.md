@@ -219,16 +219,16 @@ python -m pip install -e /Users/sh/Projects/dokimasia
 
 Once stable, the dependency can be pinned by git SHA or package version.
 
-The AI-backed E2E command should remain simple:
+The AI-backed E2E command should remain simple and use the locked `e2e` dependency group:
 
 ```bash
-TEA_SKILLS_E2E=1 python -m unittest tests.e2e.test_agent_e2e -v
+TEA_SKILLS_E2E=1 uv run --group e2e pytest tests/e2e/test_agent_e2e.py -v
 ```
 
-A package CLI may also be supported:
+The non-AI harness checks should run through the same dependency group:
 
 ```bash
-TEA_SKILLS_E2E=1 doki run tests/e2e/tea_suite/scenarios/issues.yaml
+uv run --group e2e pytest
 ```
 
 ## Migration plan
