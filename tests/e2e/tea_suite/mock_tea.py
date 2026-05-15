@@ -116,10 +116,23 @@ def run_mock_tea(
     if argv[0] == "logins":
         return _render(fixture_pack_dir, "logins.stdout.txt"), "", 0
 
+    if argv[0] == "login":
+        return _run_login(argv[1:], fixture_pack_dir=fixture_pack_dir)
+
     if argv[0] in _ISSUES_ALIASES:
         return _run_issues(argv[1:], state_path=state_path, fixture_pack_dir=fixture_pack_dir, cwd=cwd)
 
     return "", f"mock tea: unsupported command: {' '.join(argv)}\n", 2
+
+
+def _run_login(argv: list[str], *, fixture_pack_dir: Path) -> tuple[str, str, int]:
+    if not argv or argv[0] != "list":
+        return "", f"mock tea: unsupported login command: {' '.join(argv)}\n", 2
+
+    output = _flag_value(argv[1:], "-o", "--output")
+    if output == "csv":
+        return _render(fixture_pack_dir, "login/list.csv.stdout.txt"), "", 0
+    return _render(fixture_pack_dir, "logins.stdout.txt"), "", 0
 
 
 def _run_issues(

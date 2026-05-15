@@ -68,12 +68,9 @@ def test_make_agent_adapter_rejects_unknown_agent():
             test_agent_e2e.make_agent_adapter()
 
 
-def test_live_e2e_requires_tea_through_dokimasia_env_helper():
-    with mock.patch("tests.e2e.test_agent_e2e.require_executable", return_value=Path("/bin/tea")) as require:
-        real_tea = test_agent_e2e.e2e_real_tea()
-
-    assert real_tea == Path("/bin/tea")
-    require.assert_called_once_with("tea")
+def test_mock_e2e_does_not_require_host_tea():
+    assert not hasattr(test_agent_e2e, "e2e_real_tea")
+    assert not hasattr(test_agent_e2e, "require_executable")
 
 
 def test_issue_title_and_body_include_run_id():
@@ -160,6 +157,46 @@ def test_create_mock_tea_builds_executable_state_and_env(tmp_path):
     assert env["PATH"].split(os.pathsep)[0] == str(mock_tea.bin_dir)
     assert env["TEA_SKILLS_MOCK_TEA_STATE"] == str(mock_tea.state_path)
     assert env["TEA_SKILLS_MOCK_TEA_FIXTURES"] == str(mock_tea.fixture_pack_dir)
+
+
+def test_mock_tea_supports_login_list_csv_for_session_hook(tmp_path):
+    from tests.e2e.tea_suite.mock_tea import create_mock_tea
+
+    mock_tea = create_mock_tea(tmp_path / "mock-tea")
+    env = mock_tea.env_with_path(os.environ)
+
+    plain = subprocess.run(
+        [str(mock_tea.executable), "login", "list"],
+        env=env,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    csv = subprocess.run(
+        [str(mock_tea.executable), "login", "list", "-o", "csv"],
+        env=env,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    login_count = subprocess.run(
+        ["sh", "-c", "tail -n +2 | wc -l"],
+        input=csv.stdout,
+        text=True,
+        stdout=subprocess.PIPE,
+        check=True,
+    )
+
+    assert plain.returncode == 0
+    assert plain.stderr == ""
+    assert "mock-forgejo https://mock.invalid" in plain.stdout
+    assert csv.returncode == 0
+    assert csv.stderr == ""
+    assert csv.stdout.splitlines()[0] == "Name,URL"
+    assert "mock-forgejo,https://mock.invalid" in csv.stdout.splitlines()[1:]
+    assert int(login_count.stdout.strip()) > 0
 
 
 def test_mock_tea_creates_issue_and_renders_fixture_output(tmp_path):

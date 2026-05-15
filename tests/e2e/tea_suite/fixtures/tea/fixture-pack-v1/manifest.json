@@ -4,6 +4,8 @@
   "template_syntax": "Python str.format placeholders",
   "commands": {
     "logins": {"stdout": "logins.stdout.txt", "exit_code": 0},
+    "login list": {"stdout": "logins.stdout.txt", "exit_code": 0},
+    "login list -o csv": {"stdout": "login/list.csv.stdout.txt", "exit_code": 0},
     "issues create": {"stdout": "issues/create.success.stdout.txt", "exit_code": 0, "mutates": "create_issue"},
     "issues list -o simple": {"stdout": "issues/list.simple.stdout.txt", "exit_code": 0},
     "issues show": {"stdout": "issues/show.stdout.txt", "exit_code": 0}

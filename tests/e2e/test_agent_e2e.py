@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -9,18 +10,25 @@ import pytest
 from dokimasia.agents.claude_code import ClaudeCodeAdapter
 from dokimasia.agents.pi import PiAdapter
 from dokimasia.pytest import assert_command_ran, cmd
-from dokimasia.suite.env import require_executable
 from dokimasia.suite.layout import create_run_id, prepare_run_root
-from tests.e2e.tea_suite.provision import ForgejoRun, cleanup_run, create_org_and_repo
-from tests.e2e.tea_suite.verify_forgejo import list_issues
+from tests.e2e.tea_suite.mock_tea import MockTea, create_mock_tea
 
 ROOT = Path(__file__).resolve().parents[2]
 TEA = cmd.spy("tea")
 ISSUE_CREATE = TEA.match(pattern=[("issues", "issue", "i"), ("create", "c")])
 
+
+@dataclass(frozen=True)
+class MockTeaRun:
+    run_id: str
+    workspace: Path
+    artifact_dir: Path
+    tea: MockTea
+
+
 pytestmark = pytest.mark.skipif(
     os.environ.get("TEA_SKILLS_E2E") != "1",
-    reason="set TEA_SKILLS_E2E=1 to run live agent E2E tests",
+    reason="set TEA_SKILLS_E2E=1 to run AI-backed mock tea E2E tests",
 )
 
 
@@ -34,10 +42,6 @@ def issue_body_for_run(run_id: str) -> str:
 
 def e2e_run_id() -> str:
     return create_run_id()
-
-
-def e2e_real_tea() -> Path:
-    return require_executable("tea")
 
 
 def e2e_run_root(run_id: str) -> Path:
@@ -69,23 +73,33 @@ def live_run_id() -> str:
 
 
 @pytest.fixture
-def forgejo_run(live_run_id: str) -> ForgejoRun:
-    require_executable("tea")
-    run = create_org_and_repo(e2e_run_root(live_run_id), live_run_id)
-    try:
-        yield run
-    finally:
-        cleanup_run(run, keep_remote=os.environ.get("TEA_SKILLS_E2E_KEEP_REMOTE") == "1")
+def mock_tea_run(live_run_id: str) -> MockTeaRun:
+    root = e2e_run_root(live_run_id)
+    workspace = root / "workspace" / "repo"
+    artifact_dir = root / "artifacts"
+    workspace.mkdir(parents=True, exist_ok=True)
+    artifact_dir.mkdir(parents=True, exist_ok=True)
+    (workspace / "AGENTS.md").write_text(
+        "# Repository context\n\nThis repository is hosted on Forgejo. Use tea for issue workflows.\n",
+        encoding="utf-8",
+    )
+    return MockTeaRun(
+        run_id=live_run_id,
+        workspace=workspace,
+        artifact_dir=artifact_dir,
+        tea=create_mock_tea(root / "mock-tea"),
+    )
 
 
-def test_create_issue_from_body_file_with_pytest_dokimasia_api(doki_factory, forgejo_run: ForgejoRun):
-    title = issue_title_for_run(forgejo_run.run_id)
-    body = issue_body_for_run(forgejo_run.run_id)
+def test_create_issue_from_body_file_with_pytest_dokimasia_api(doki_factory, mock_tea_run: MockTeaRun):
+    title = issue_title_for_run(mock_tea_run.run_id)
+    body = issue_body_for_run(mock_tea_run.run_id)
     doki = doki_factory(
         agent=make_agent_adapter(),
-        workspace=forgejo_run.workspace,
-        artifact_dir=forgejo_run.artifact_dir,
-        run_id=forgejo_run.run_id,
+        workspace=mock_tea_run.workspace,
+        artifact_dir=mock_tea_run.artifact_dir,
+        run_id=mock_tea_run.run_id,
+        env=mock_tea_run.tea.env_with_path(os.environ),
         spies=[TEA],
     )
     doki.write_file("issue-body.md", body)
@@ -99,6 +113,4 @@ def test_create_issue_from_body_file_with_pytest_dokimasia_api(doki_factory, for
     assert result.has_skill_loaded("create-issue")
     assert_command_ran(result, ISSUE_CREATE, times=1)
     assert len(result.commands) <= 12
-    assert_single_issue_matches(
-        list_issues(forgejo_run.config, forgejo_run.org, forgejo_run.repo), title=title, body=body
-    )
+    assert_single_issue_matches(mock_tea_run.tea.load_state()["issues"], title=title, body=body)
