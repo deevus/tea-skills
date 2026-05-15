@@ -1,3 +1,17 @@
+[project]
+name = "tea-skills"
+version = "0.0.0"
+requires-python = ">=3.10"
+
+[dependency-groups]
+e2e = [
+    "dokimasia @ git+https://github.com/deevus/dokimasia.git",
+    "pytest",
+]
+
+[tool.uv.dependency-groups]
+e2e = { requires-python = ">=3.11" }
+
 [tool.ruff]
 line-length = 120
 target-version = "py310"
