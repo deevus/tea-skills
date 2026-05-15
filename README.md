@@ -27,26 +27,10 @@ See [`actions/README.md`](actions/README.md) and the domain README files for exa
 | Milestones | `actions/milestones/README.md` |
 | Organization Labels | `actions/org-labels/README.md` |
 
-### Bundled action invocation
-
-Skill docs use `actions/<domain>/<action>` as a bundled plugin resource path. It refers to this plugin's `actions/` directory inside the installed plugin, not to an `actions/` directory in the user's current repository.
-
-When executing from another project, resolve the action to the installed plugin root and run that absolute path while keeping the working directory in the target repository:
-
-```bash
-/path/to/tea-skills/actions/issues/dependency-ready.py
-```
-
-Do not require users to `cd` into this plugin or add `actions/` to `PATH`. Actions intentionally run from the target repository because the private Adapter derives owner and repo from that repository's git remote.
-
 ## Prerequisites
 
 - [tea CLI](https://gitea.com/gitea/tea) configured with `tea login`
 - Python 3
-
-## Development testing
-
-Contributor docs for the opt-in live agent E2E harness live in [`tests/e2e/README.md`](tests/e2e/README.md).
 
 ## Installation
 
@@ -56,35 +40,9 @@ Install as a Claude Code plugin:
 claude mcp add-plugin tea /path/to/tea-skills
 ```
 
-## Structure
+## Contributing
 
-```
-tea-skills/
-├── .claude-plugin/
-│   ├── marketplace.json
-│   └── plugin.json
-├── hooks/
-│   ├── hooks.json
-│   ├── run-hook.cmd
-│   └── session-start.sh
-├── actions/
-│   ├── README.md
-│   ├── internal/
-│   │   ├── README.md
-│   │   └── tea_api.py
-│   ├── issues/
-│   ├── pull-requests/
-│   ├── milestones/
-│   └── org-labels/
-├── skills/
-│   ├── create-issue/
-│   ├── create-pull/
-│   ├── issue-dependencies/
-│   ├── merge-pull/
-│   └── ...
-├── README.md
-└── LICENSE
-```
+Development and test details live in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## License
 
