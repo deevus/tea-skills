@@ -11,11 +11,23 @@ import pytest
 from dokimasia.agents.pi import PiAdapter
 from dokimasia.pytest import assert_command_ran, cmd
 from dokimasia.suite.layout import create_run_id, prepare_run_root
-from tests.e2e.tea_suite.mock_tea import MockTea, create_mock_tea
+from tests.e2e.tea_suite.mock_tea import MockTea, create_mock_tea, save_mock_tea_state
 
 ROOT = Path(__file__).resolve().parents[2]
 TEA = cmd.spy("tea")
 ISSUE_CREATE = TEA.match(pattern=[("issues", "issue", "i"), ("create", "c")])
+ISSUE_LIST = TEA.match(pattern=[("issues", "issue", "i"), ("list", "ls", "l")])
+ISSUE_SHOW = TEA.match(
+    pattern=[("issues", "issue", "i")],
+    where=lambda command: (
+        len(command.argv) >= 2
+        and (
+            command.argv[1].isdigit()
+            or (command.argv[1] in {"show", "s"} and any(arg.isdigit() for arg in command.argv[2:]))
+        )
+    ),
+)
+DEFAULT_DOKIMASIA_MODEL = "deepseek/deepseek-v4-flash"
 MOCK_ORIGIN_URL = "https://mock.invalid/sh/mock-repo.git"
 
 
@@ -54,6 +66,12 @@ def make_agent_adapter():
     return PiAdapter(skills_dir=ROOT / "skills", extra_args=["--no-extensions"])
 
 
+def e2e_env(mock_tea: MockTea) -> dict[str, str]:
+    env = mock_tea.env_with_path(os.environ)
+    env.setdefault("DOKIMASIA_MODEL", DEFAULT_DOKIMASIA_MODEL)
+    return env
+
+
 def prepare_mock_workspace(workspace: Path) -> None:
     workspace.mkdir(parents=True, exist_ok=True)
     (workspace / "AGENTS.md").write_text(
@@ -86,6 +104,16 @@ def assert_single_issue_matches(issues: list[dict[str, Any]], *, title: str, bod
     assert issue.get("body", "").strip() == body.strip(), "expected issue body to match issue-body.md"
 
 
+def seed_mock_issue(mock_tea: MockTea, *, title: str, body: str, number: int = 1) -> None:
+    save_mock_tea_state(
+        mock_tea.state_path,
+        {
+            "next_issue_number": number + 1,
+            "issues": [{"number": number, "title": title, "body": body, "state": "open"}],
+        },
+    )
+
+
 @pytest.fixture
 def mock_run_id() -> str:
     return e2e_run_id()
@@ -114,7 +142,7 @@ def test_create_issue_from_body_file_with_pytest_dokimasia_api(doki_factory, moc
         workspace=mock_tea_run.workspace,
         artifact_dir=mock_tea_run.artifact_dir,
         run_id=mock_tea_run.run_id,
-        env=mock_tea_run.tea.env_with_path(os.environ),
+        env=e2e_env(mock_tea_run.tea),
         spies=[TEA],
     )
     doki.write_file("issue-body.md", body)
@@ -129,3 +157,29 @@ def test_create_issue_from_body_file_with_pytest_dokimasia_api(doki_factory, moc
     assert_command_ran(result, ISSUE_CREATE, times=1)
     assert len(result.commands) <= 12
     assert_single_issue_matches(mock_tea_run.tea.load_state()["issues"], title=title, body=body)
+
+
+def test_list_issue_domain_with_pytest_dokimasia_api(doki_factory, mock_tea_run: MockTeaRun):
+    title = f"E2E {mock_tea_run.run_id} issue domain list"
+    body = f"E2E issue domain body marker: {mock_tea_run.run_id}"
+    seed_mock_issue(mock_tea_run.tea, title=title, body=body)
+    doki = doki_factory(
+        agent=make_agent_adapter(),
+        workspace=mock_tea_run.workspace,
+        artifact_dir=mock_tea_run.artifact_dir,
+        run_id=mock_tea_run.run_id,
+        env=e2e_env(mock_tea_run.tea),
+        spies=[TEA],
+    )
+
+    result = doki.run(
+        "List open issues and save the body of the first issue to first-issue-body.txt.",
+        artifact_name="list issue domain",
+    )
+
+    assert result.ok, result.failure_summary
+    assert result.has_skill_loaded("list-issues")
+    assert_command_ran(result, ISSUE_LIST)
+    assert_command_ran(result, ISSUE_SHOW)
+    assert (mock_tea_run.workspace / "first-issue-body.txt").read_text(encoding="utf-8").strip() == body
+    assert len(result.commands) <= 12

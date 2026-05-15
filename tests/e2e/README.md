@@ -19,16 +19,16 @@ Run the non-AI tests:
 uv run --group e2e pytest
 ```
 
-Run the AI-backed create-issue E2E test with Pi:
+Run the AI-backed issue-domain E2E tests with Pi. The harness defaults `DOKIMASIA_MODEL` to `deepseek/deepseek-v4-flash` when the caller has not set it:
 
 ```bash
 TEA_SKILLS_E2E=1 uv run --group e2e pytest tests/e2e/test_agent_e2e.py -v
 ```
 
-Run the same test with a specific model through Dokimasia's generic model env var:
+Override the model through Dokimasia's generic model env var:
 
 ```bash
-TEA_SKILLS_E2E=1 DOKIMASIA_MODEL=deepseek/deepseek-v4-flash uv run --group e2e pytest tests/e2e/test_agent_e2e.py -v
+TEA_SKILLS_E2E=1 DOKIMASIA_MODEL=other/provider-model uv run --group e2e pytest tests/e2e/test_agent_e2e.py -v
 ```
 
 Artifacts are stored under `.e2e-artifacts/<run-id>/` by default. Override the artifact directory:
@@ -41,7 +41,7 @@ TEA_SKILLS_E2E=1 TEA_SKILLS_E2E_ARTIFACT_DIR=/tmp/tea-skills-e2e uv run --group 
 
 The test creates a local executable named `tea` before constructing the Dokimasia run. Dokimasia's `cmd.spy("tea")` wraps that mock executable, so `result.commands` and `assert_command_ran(...)` use the normal Dokimasia command assertion path without delegating to a system executable.
 
-The mock stores issue state in JSON under the run artifact root and renders output from a versioned fixture pack. It supports the commands needed by the create-issue skill scenario and session-start hook checks:
+The mock stores issue state in JSON under the run artifact root and renders output from a versioned fixture pack. It supports the commands needed by the issue-domain skill scenarios and session-start hook checks:
 
 - `tea logins`
 - `tea login list`

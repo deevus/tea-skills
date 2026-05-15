@@ -51,6 +51,28 @@ def test_make_agent_adapter_uses_pi_with_checkout_skills():
     assert adapter.extra_args == ("--no-extensions",)
 
 
+def test_e2e_env_defaults_to_deepseek_model(tmp_path):
+    from tests.e2e.tea_suite.mock_tea import create_mock_tea
+
+    mock_tea = create_mock_tea(tmp_path / "mock-tea")
+
+    with mock.patch.dict(os.environ, {}, clear=True):
+        env = test_agent_e2e.e2e_env(mock_tea)
+
+    assert env["DOKIMASIA_MODEL"] == "deepseek/deepseek-v4-flash"
+
+
+def test_e2e_env_preserves_dokimasia_model_override(tmp_path):
+    from tests.e2e.tea_suite.mock_tea import create_mock_tea
+
+    mock_tea = create_mock_tea(tmp_path / "mock-tea")
+
+    with mock.patch.dict(os.environ, {"DOKIMASIA_MODEL": "other/provider-model"}, clear=True):
+        env = test_agent_e2e.e2e_env(mock_tea)
+
+    assert env["DOKIMASIA_MODEL"] == "other/provider-model"
+
+
 def test_mock_e2e_uses_bundled_mock_tea():
     from tests.e2e.tea_suite.mock_tea import MockTea, create_mock_tea
 
@@ -124,6 +146,17 @@ def test_issue_create_matcher_accepts_tea_issue_create_aliases():
 
     assert all(test_agent_e2e.ISSUE_CREATE.matches(command) for command in commands)
     assert not test_agent_e2e.ISSUE_CREATE.matches({"source": "tea", "argv": ["issues", "list"], "exit_code": 0})
+
+
+def test_issue_show_matcher_accepts_detail_commands_without_pinning_issue_number():
+    commands = [
+        {"source": "tea", "argv": ["issues", "1"], "exit_code": 0},
+        {"source": "tea", "argv": ["issue", "show", "42"], "exit_code": 0},
+        {"source": "tea", "argv": ["i", "s", "99"], "exit_code": 0},
+    ]
+
+    assert all(test_agent_e2e.ISSUE_SHOW.matches(command) for command in commands)
+    assert not test_agent_e2e.ISSUE_SHOW.matches({"source": "tea", "argv": ["issues", "list"], "exit_code": 0})
 
 
 def test_assert_single_issue_matches_checks_count_state_and_body():
