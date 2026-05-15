@@ -1,5 +1,4 @@
 import os
-import shutil
 import unittest
 from pathlib import Path
 
@@ -8,8 +7,9 @@ from dokimasia.agents.pi import PiAdapter
 from dokimasia.core.model import RunContext
 from dokimasia.core.runner import ScenarioRunner
 from dokimasia.core.scenarios import load_scenarios
+from dokimasia.suite.env import env_with_path_prepend, require_executable
 from dokimasia.suite.layout import create_run_id, prepare_run_root, prepare_scenario_dir
-from dokimasia.suite.spy import create_spy
+from dokimasia.suite.spy import CommandSpy, create_spy
 from tests.e2e.tea_suite.normalize import normalize_raw_audit_event
 from tests.e2e.tea_suite.provision import cleanup_run, create_org_and_repo
 from tests.e2e.tea_suite.verify_forgejo import verify_state
@@ -31,6 +31,16 @@ def e2e_scenario_artifact_dir(parent: Path, scenario_name: str) -> Path:
     return prepare_scenario_dir(parent, scenario_name)
 
 
+def e2e_real_tea() -> Path:
+    return require_executable("tea")
+
+
+
+def e2e_agent_env(spy: CommandSpy) -> dict[str, str]:
+    return env_with_path_prepend(spy.path_prefix, os.environ)
+
+
+
 def make_agent_adapter():
     agent = os.environ.get("TEA_SKILLS_E2E_AGENT", "claude").lower()
     if agent == "claude":
@@ -43,8 +53,7 @@ def make_agent_adapter():
 @unittest.skipUnless(os.environ.get("TEA_SKILLS_E2E") == "1", "set TEA_SKILLS_E2E=1 to run live agent E2E tests")
 class TeaSkillsAgentE2ETests(unittest.TestCase):
     def test_create_issue_scenario(self):
-        real_tea = shutil.which("tea")
-        self.assertIsNotNone(real_tea, "tea must be installed")
+        real_tea = e2e_real_tea()
         run_id = e2e_run_id()
         root = e2e_run_root(run_id)
         run = create_org_and_repo(root, run_id)
@@ -72,7 +81,7 @@ class TeaSkillsAgentE2ETests(unittest.TestCase):
                 verifier,
                 audit_log_env_var="TEA_SKILLS_AUDIT_LOG",
             )
-            env = spy.env_with_path(os.environ)
+            env = e2e_agent_env(spy)
             result = runner.run(scenario, ctx, env)
             self.assertTrue(
                 result.passed,

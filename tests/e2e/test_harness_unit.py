@@ -168,6 +168,25 @@ class HarnessUnitTests(unittest.TestCase):
         self.assertFalse((test_agent_e2e.ROOT / "tests/e2e/tea_suite/tea_spy.py").exists())
 
 
+    def test_live_e2e_requires_tea_through_dokimasia_env_helper(self):
+        with mock.patch("tests.e2e.test_agent_e2e.require_executable", return_value=Path("/bin/tea")) as require:
+            real_tea = test_agent_e2e.e2e_real_tea()
+
+        self.assertEqual(real_tea, Path("/bin/tea"))
+        require.assert_called_once_with("tea")
+
+    def test_live_e2e_agent_env_prepends_spy_path_through_dokimasia_env_helper(self):
+        spy = mock.Mock(path_prefix="/spy/bin")
+        expected = {"PATH": "/spy/bin:/usr/bin"}
+
+        with mock.patch("tests.e2e.test_agent_e2e.env_with_path_prepend", return_value=expected) as prepend:
+            with mock.patch.dict(os.environ, {"PATH": "/usr/bin"}, clear=True):
+                env = test_agent_e2e.e2e_agent_env(spy)
+
+        self.assertEqual(env, expected)
+        prepend.assert_called_once_with("/spy/bin", os.environ)
+
+
 
     def test_e2e_run_id_uses_dokimasia_layout(self):
         with mock.patch("tests.e2e.test_agent_e2e.create_run_id", return_value="abc123") as create:
