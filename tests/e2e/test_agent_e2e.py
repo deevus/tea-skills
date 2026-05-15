@@ -68,13 +68,13 @@ def assert_single_issue_matches(issues: list[dict[str, Any]], *, title: str, bod
 
 
 @pytest.fixture
-def live_run_id() -> str:
+def mock_run_id() -> str:
     return e2e_run_id()
 
 
 @pytest.fixture
-def mock_tea_run(live_run_id: str) -> MockTeaRun:
-    root = e2e_run_root(live_run_id)
+def mock_tea_run(mock_run_id: str) -> MockTeaRun:
+    root = e2e_run_root(mock_run_id)
     workspace = root / "workspace" / "repo"
     artifact_dir = root / "artifacts"
     workspace.mkdir(parents=True, exist_ok=True)
@@ -84,7 +84,7 @@ def mock_tea_run(live_run_id: str) -> MockTeaRun:
         encoding="utf-8",
     )
     return MockTeaRun(
-        run_id=live_run_id,
+        run_id=mock_run_id,
         workspace=workspace,
         artifact_dir=artifact_dir,
         tea=create_mock_tea(root / "mock-tea"),

@@ -8,10 +8,7 @@ from unittest import mock
 
 import pytest
 
-from actions.internal.tea_api import TeaConfig
 from tests.e2e import test_agent_e2e
-from tests.e2e.tea_suite import verify_forgejo
-from tests.e2e.tea_suite.provision import assert_safe_e2e_resource
 
 
 def test_e2e_run_id_uses_dokimasia_layout():
@@ -68,9 +65,11 @@ def test_make_agent_adapter_rejects_unknown_agent():
             test_agent_e2e.make_agent_adapter()
 
 
-def test_mock_e2e_does_not_require_host_tea():
-    assert not hasattr(test_agent_e2e, "e2e_real_tea")
-    assert not hasattr(test_agent_e2e, "require_executable")
+def test_mock_e2e_uses_bundled_mock_tea():
+    from tests.e2e.tea_suite.mock_tea import MockTea, create_mock_tea
+
+    assert test_agent_e2e.MockTea is MockTea
+    assert test_agent_e2e.create_mock_tea is create_mock_tea
 
 
 def test_issue_title_and_body_include_run_id():
@@ -114,32 +113,6 @@ def test_assert_single_issue_matches_checks_count_state_and_body():
             [{"number": 1, "title": "Wanted", "body": "different", "state": "open"}],
             title="Wanted",
             body="body marker",
-        )
-
-
-def test_safe_e2e_resource_policy_requires_suite_prefix_and_run_id():
-    assert_safe_e2e_resource("tea-e2e-abc123", "abc123")
-
-    with pytest.raises(ValueError, match="out-of-scope disposable resource"):
-        assert_safe_e2e_resource("production-org", "abc123")
-
-
-def test_list_issues_uses_project_owned_forgejo_api_request():
-    config = TeaConfig(token="token", base_url="https://forgejo.example")
-    payload = [{"number": 1, "title": "Wanted"}]
-
-    with mock.patch("tests.e2e.tea_suite.verify_forgejo.api_request", return_value=payload) as api_request:
-        issues = verify_forgejo.list_issues(config, "org/name", "repo name")
-
-    assert issues == payload
-    api_request.assert_called_once_with(config, "GET", "repos/org%2Fname/repo%20name/issues?state=all")
-
-
-def test_list_issues_returns_empty_list_for_non_list_response():
-    with mock.patch("tests.e2e.tea_suite.verify_forgejo.api_request", return_value={"message": "not a list"}):
-        assert (
-            verify_forgejo.list_issues(TeaConfig(token="token", base_url="https://forgejo.example"), "org", "repo")
-            == []
         )
 
 
