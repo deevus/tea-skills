@@ -14,7 +14,7 @@ The extracted harness must be generic: it must not know about `tea`, Forgejo, Gi
 The current `tests/e2e/harness/` code started inside `tea-skills` to prove the vertical slice quickly. That was useful, but it created two kinds of cross-pollination:
 
 1. The plugin repository avoids package/dependency management for skill runtime content, while a test harness should be free to use normal Python test tooling such as PyYAML, pytest, rich output, and packaging metadata.
-2. The generic harness boundary is becoming mixed with the `tea-skills` suite boundary. Generic concepts like scenario loading, artifact directories, trace assertions, and agent adapters sit next to Forgejo provisioning and `tea` audit normalization.
+2. The generic harness boundary is becoming mixed with the `tea-skills` suite boundary. Generic concepts like scenario loading, artifact directories, trace assertions, and agent adapters sit next to mock `tea` behavior and `tea` audit normalization.
 
 This already caused a design mismatch: the design used YAML scenario sketches, while the implementation used JSON to avoid adding dependencies inside the plugin repository.
 
@@ -68,12 +68,12 @@ agent_e2e/
 
 ### `tea-skills` suite responsibilities
 
-`tea-skills` owns only the suite code that is specific to testing this plugin against Forgejo:
+`tea-skills` owns only the suite code that is specific to testing this plugin's Forgejo workflows:
 
-- disposable Forgejo org/repo provisioning and cleanup;
+- mock `tea` executable behavior and fixture packs;
 - `tea` command spy/wrapper;
 - `tea` and bundled action audit normalization;
-- Forgejo state verifiers;
+- mock state verifiers;
 - skill scenario files;
 - defaults for this suite;
 - thin test/CLI host that wires generic harness interfaces to the `tea-skills` suite implementation.
@@ -84,10 +84,10 @@ Suggested in-repo layout after extraction:
 tests/e2e/
   tea_suite/
     __init__.py
-    normalize.py
-    provision.py
-    tea_spy.py
-    verify_forgejo.py
+    mock_tea.py
+    fixtures/
+      tea/
+        fixture-pack-v1/
     defaults.yaml
     scenarios/
       issues.yaml
@@ -219,7 +219,7 @@ python -m pip install -e /Users/sh/Projects/dokimasia
 
 Once stable, the dependency can be pinned by git SHA or package version.
 
-The live command should remain simple:
+The AI-backed E2E command should remain simple:
 
 ```bash
 TEA_SKILLS_E2E=1 python -m unittest tests.e2e.test_agent_e2e -v
@@ -234,17 +234,17 @@ TEA_SKILLS_E2E=1 doki run tests/e2e/tea_suite/scenarios/issues.yaml
 ## Migration plan
 
 1. Create the standalone generic package and move generic modules into it without changing behavior.
-2. Update `tea-skills` imports to consume the package while keeping the current live create-issue scenario passing.
+2. Update `tea-skills` imports to consume the package while keeping the current mock-backed create-issue scenario passing.
 3. Convert `defaults.json` and `issues.json` to YAML.
 4. Add an env/CLI agent selector so the same suite can run against Claude Code or Pi.
 5. Remove duplicated generic harness code from `tea-skills` once the dependency is wired.
-6. Keep Forgejo/tea-specific provisioning, audit normalization, and state verifiers in `tea-skills`.
+6. Keep Forgejo/tea-specific mock behavior, audit normalization, and state verifiers in `tea-skills`.
 
 ## Success criteria
 
 - The generic package has no imports from `tea-skills`, no references to Forgejo/Gitea/tea, and no scenario assumptions beyond generic contracts.
-- `tea-skills` still passes the non-live test suite.
-- The live create-issue scenario still passes against Forgejo using the external harness package.
+- `tea-skills` still passes the non-AI test suite.
+- The AI-backed create-issue scenario still passes against the mock `tea` executable using the external harness package.
 - Scenario files in `tea-skills` are YAML.
 - Harness artifacts continue to default to `.e2e-artifacts/<run-id>/`, configurable by environment.
 - Claude Code and Pi adapters both continue to force current-checkout skill source isolation where applicable.
@@ -252,6 +252,6 @@ TEA_SKILLS_E2E=1 doki run tests/e2e/tea_suite/scenarios/issues.yaml
 ## Non-goals
 
 - Do not build the full every-skill scenario catalog as part of the extraction.
-- Do not move Forgejo provisioning or `tea` audit normalization into the generic package.
+- Do not move mock `tea` behavior or `tea` audit normalization into the generic package.
 - Do not require the generic package to know about Claude Code plugin structure beyond adapter configuration.
-- Do not make live E2E tests run by default.
+- Do not make AI-backed E2E tests run by default.

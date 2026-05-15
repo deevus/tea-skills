@@ -8,7 +8,7 @@ Source of truth: `docs/adr/0003-agent-e2e-harness-with-audited-actions.md`
 
 ## Summary
 
-Augment the action-based API gap adapter work with an opt-in agent-facing end-to-end harness. The harness runs real single-turn agent sessions against a real Forgejo server, using disposable Forgejo organizations and repositories. It verifies not only that Forgejo state changes correctly, but that the agent loaded the expected skill and reached the state through observed `tea` or bundled `actions/*` calls.
+Augment the action-based API gap adapter work with an opt-in agent-facing end-to-end harness. The harness runs live single-turn agent sessions against a local, stateful mock `tea` executable. It verifies not only that modeled Forgejo workflow state changes correctly, but that the agent loaded the expected skill and reached the state through observed `tea` or bundled `actions/*` calls.
 
 This spec gives implementation detail and examples. The ADR is authoritative for architectural decisions.
 
@@ -24,7 +24,7 @@ The action adapter design replaces old bash scripts with action-specific `action
 ## Goals
 
 - Verify that agents discover and load the relevant skill without being explicitly told which skill to use.
-- Verify real Forgejo state changes in a disposable org/repo.
+- Verify modeled Forgejo workflow state changes in disposable local mock state.
 - Attribute expected mutations to audited `tea` or bundled action calls.
 - Detect loop/confusion behavior through repeated command roots and timeouts.
 - Keep the harness generic enough to extract later, while implementing it inside this repository first.
@@ -51,11 +51,11 @@ pytest host
       └─ artifact/reporting model
 
 tea suite plugin
-  ├─ Forgejo provisioner and cleanup
+  ├─ mock tea executable and fixture pack
   ├─ tea PATH spy
   ├─ action audit log parser
   ├─ tea/action command normalizer
-  ├─ Forgejo state verifiers
+  ├─ mock state verifiers
   ├─ default budgets
   └─ scenario files
 ```
@@ -82,10 +82,9 @@ tests/e2e/
 
   suites/
     tea/
-      provision.py
+      mock_tea.py
       tea_spy.py
       normalize.py
-      verify_forgejo.py
       defaults.yml
       scenarios/
         issues.yml
@@ -102,10 +101,9 @@ tests/e2e/
 
 Each scenario follows this lifecycle:
 
-1. Preflight verifies a real `tea` binary, configured login, Forgejo API access, and adapter support for skill-load traces.
-2. Suite provisioning creates a unique temporary Forgejo org and repo.
-3. The harness clones the repo into a temporary workspace.
-4. The harness writes minimal repository context, for example:
+1. Preflight verifies adapter support for skill-load traces.
+2. Suite setup creates a unique local workspace and mock `tea` state.
+3. The harness writes minimal repository context, for example:
 
    ```md
    # Repository context
@@ -113,14 +111,13 @@ Each scenario follows this lifecycle:
    This repository is hosted on Forgejo.
    ```
 
-5. Scenario fixtures are rendered into the workspace.
-6. The harness clears or segments the audit log.
-7. The agent adapter runs one prompt in the workspace with the instrumented environment.
-8. The harness parses agent trace events and audit events.
-9. The suite verifier independently checks Forgejo state.
-10. The harness applies trace, audit, budget, and timeout assertions.
-11. Successful scenarios may write named outputs into shared run context.
-12. Cleanup deletes the disposable repo and org at suite end.
+4. Scenario fixtures are rendered into the workspace.
+5. The harness clears or segments the audit log.
+6. The agent adapter runs one prompt in the workspace with the instrumented environment.
+7. The harness parses agent trace events and audit events.
+8. The suite verifier independently checks mock state.
+9. The harness applies trace, audit, budget, and timeout assertions.
+10. Successful scenarios may write named outputs into shared run context.
 
 Scenario prompts should be natural user requests. They must not mention installed skills, `tea`, bundled action paths, expected command roots, or forbidden routes such as raw API/curl.
 
@@ -214,7 +211,7 @@ Adapters that cannot prove skill loading are out of scope for the MVP.
 
 The harness receives audit JSONL from two sources:
 
-1. A `tea` PATH wrapper that logs agent `tea` invocations and delegates to the real binary.
+1. A `tea` PATH executable that logs agent `tea` invocations and delegates to the project-owned mock implementation.
 2. Bundled `actions/*` executables that log to `TEA_SKILLS_AUDIT_LOG` when set.
 
 Normalized audit event shape:
@@ -247,22 +244,9 @@ The generic harness delegates state checks to suite-provided verifiers.
 verify(expectation, run_context) -> StateCheckResult
 ```
 
-The Forgejo suite should include verifiers for:
+The Forgejo suite should include mock-backed verifiers for the workflow state modeled by the fixture pack. The initial vertical slice verifies issues.
 
-- repositories
-- issues
-- issue comments
-- issue dependencies
-- issue locks
-- issue pins
-- issue reactions
-- labels
-- organization labels
-- milestones
-- pull requests
-- pull reviews
-
-Verification should use direct Forgejo API access or another unaudited verifier route, not the agent's `tea` wrapper or bundled action audit path.
+Verification should use the mock state file or another unaudited verifier route, not the agent's `tea` wrapper or bundled action audit path.
 
 ## Budgets and timeout
 
@@ -303,7 +287,7 @@ Rules:
 A scenario passes only when all of these hold:
 
 1. Required skill-load trace events were observed.
-2. Expected Forgejo state was independently verified.
+2. Expected suite state was independently verified.
 3. Expected audited mutation events explain the state change.
 4. Command budgets were not exceeded.
 5. The agent completed within the timeout and returned successfully.
@@ -320,17 +304,16 @@ audit_budget_exceeded
 cleanup_failed
 ```
 
-If the Forgejo state is correct but no expected audited mutation was observed, fail with `missing_audited_mutation`. This catches raw API/curl routes without needing to explicitly forbid them.
+If the suite state is correct but no expected audited mutation was observed, fail with `missing_audited_mutation`. This catches raw API/curl routes without needing to explicitly forbid them.
 
 ## Safety and artifacts
 
 The Forgejo suite must:
 
-- create uniquely named resources with a `tea-e2e-*` run identity;
-- delete only resources matching the current run identity;
+- create uniquely named local run directories and mock state;
+- clean only resources matching the current run identity;
 - refuse cleanup outside those guardrails;
-- preserve artifacts on failure;
-- optionally preserve remote resources for debugging with an explicit flag such as `--keep-remote`.
+- preserve artifacts on failure.
 
 Artifacts should include:
 
@@ -340,8 +323,7 @@ Artifacts should include:
 - normalized trace events;
 - raw audit JSONL;
 - normalized audit events;
-- Forgejo state snapshots;
-- cleanup logs.
+- mock state snapshots.
 
 ## Open implementation choices
 
@@ -350,8 +332,8 @@ These are intentionally left to the implementation plan:
 - Which agent adapter is implemented first.
 - Whether the default isolation mode is one org/repo per suite, per domain, or per scenario.
 - The exact scenario inventory for each current skill.
-- The exact Forgejo API helper used by the verifier.
+- The exact mock state helper used by the verifier.
 
 ## Implemented vertical slice
 
-The first implementation pass builds a single live create-issue scenario to prove the full harness contract. It intentionally uses stdlib `unittest` as the dependency-free host while remaining pytest-collectable. Full representative scenarios for every skill should be added in a follow-up plan once the vertical slice is stable against the target Forgejo server and selected agent adapter.
+The first implementation pass builds a single AI-backed create-issue scenario to prove the full harness contract. It uses pytest and Dokimasia with a project-owned mock `tea` executable. Full representative scenarios for every skill should be added in a follow-up plan once the vertical slice is stable against the selected agent adapter.

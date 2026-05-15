@@ -1,16 +1,16 @@
 # Add an audited agent E2E harness for Forgejo skills
 
-The project will add an end-to-end integration harness that runs real agent sessions against a real Forgejo server, using disposable Forgejo organizations and repositories. This ADR is the source of truth for the harness architecture. The companion design spec may add examples and implementation notes, but should not contradict these decisions.
+The project will add an end-to-end integration harness that runs live agent sessions against a local, stateful mock `tea` executable. This ADR is the source of truth for the harness architecture. The companion design spec may add examples and implementation notes, but should not contradict these decisions.
 
 ## Context
 
-The action-based API gap adapter design requires post-task integration testing against Forgejo/Gitea. A command-only test would verify `tea` and bundled actions, but would not verify that agents discover and use the skills correctly. A pure agent transcript test would verify discoverability, but could miss whether the intended Forgejo state was actually created or whether the agent reached it through unaudited routes.
+The action-based API gap adapter design requires post-task integration testing of Forgejo/Gitea workflows. A command-only test would verify `tea` and bundled actions, but would not verify that agents discover and use the skills correctly. A pure agent transcript test would verify discoverability, but could miss whether the intended issue state was actually created or whether the agent reached it through unaudited routes.
 
 The harness therefore needs three independent evidence streams:
 
 1. Agent trace events, including proof that expected skills were loaded.
 2. Audit events for external operations, including `tea` calls and bundled `actions/*` calls.
-3. Independent Forgejo state verification through direct API access or otherwise unaudited verifier routes.
+3. Independent state verification through local mock state or otherwise unaudited verifier routes.
 
 ## Decision
 
@@ -32,7 +32,7 @@ Build a generic-but-in-repo agent E2E harness under `tests/e2e/`, with `tea-skil
 
 ### Agent environment
 
-- The harness provisions a disposable Forgejo organization and repository for each run or suite strategy.
+- The harness creates a disposable local workspace and per-run mock `tea` state.
 - The workspace includes only minimal repository context, such as `AGENTS.md` saying that the repository is hosted on Forgejo.
 - Scenario prompts must not explicitly tell the agent to use skills, `tea`, bundled actions, or avoid `curl`.
 - Skill discoverability is part of what the harness tests.
@@ -51,7 +51,7 @@ If an adapter cannot prove skill loading, it is not suitable for this E2E suite.
 
 The agent process receives an instrumented environment:
 
-- A `tea` wrapper earlier in `PATH` records every agent `tea` invocation and then delegates to the real `tea` binary.
+- A `tea` executable earlier in `PATH` records every agent `tea` invocation and delegates to a project-owned mock implementation.
 - Bundled `actions/*` support `TEA_SKILLS_AUDIT_LOG` and log their own invocations when the variable is set.
 - Old `scripts/*` are assumed not to exist for this harness.
 - The harness does not invoke bundled actions directly during setup, verification, or cleanup.
@@ -68,16 +68,16 @@ Raw argv and process details are retained for diagnostics, but assertions should
 
 ### State verification
 
-The harness independently verifies Forgejo state after each scenario. Verification must not use the agent's audited command path. The Forgejo/tea suite provides state verifiers for issues, comments, dependencies, locks, pins, reactions, labels, org labels, milestones, pull requests, reviews, and repositories.
+The harness independently verifies suite state after each scenario. Verification must not use the agent's audited command path. The initial Forgejo/tea suite verifies issue state by inspecting the mock `tea` state file.
 
 A scenario passes only when all required evidence agrees:
 
 1. Expected skill load events were observed.
-2. Expected Forgejo state exists.
+2. Expected suite state exists.
 3. Expected audited mutations explain the state change.
 4. Command budgets and execution timeout were not exceeded.
 
-If final Forgejo state is correct but no audited mutation explains it, the scenario fails as an unattributed mutation.
+If final suite state is correct but no audited mutation explains it, the scenario fails as an unattributed mutation.
 
 ### Budgets and loop detection
 
@@ -91,16 +91,16 @@ The harness uses default command budgets with per-scenario overrides.
 
 ### Safety and cleanup
 
-- The harness creates uniquely named disposable organizations and repositories, such as `tea-e2e-*`.
-- Cleanup deletes only resources matching the current run identity.
-- The harness refuses destructive cleanup for resources outside its naming/run-id guardrails.
-- Full artifacts are preserved on failure, including agent stdout/stderr, raw traces, audit logs, normalized events, state snapshots, and cleanup diagnostics.
+- The harness creates uniquely named local run directories.
+- Cleanup is limited to artifacts and mock state for the current run identity.
+- The harness refuses destructive cleanup outside its run directory guardrails.
+- Full artifacts are preserved on failure, including agent stdout/stderr, raw traces, audit logs, normalized events, and state snapshots.
 
 ## Consequences
 
-This design tests agent behavior, skill discoverability, command routing, and real Forgejo state together. It is more complex than command-level tests, but catches failures that unit tests and command-only integration tests cannot catch.
+This design tests agent behavior, skill discoverability, command routing, and mocked Forgejo workflow state together. It is more complex than command-level tests, but catches failures that unit tests and command-only integration tests cannot catch.
 
-The harness will be slower and more environment-dependent than unit tests because it requires an existing configured `tea` login and a Forgejo server where disposable orgs/repos can be created. It should therefore be opt-in and clearly separated from fast tests.
+The harness is slower and more environment-dependent than unit tests because it performs AI inference. It remains opt-in and clearly separated from fast tests, but it does not require a host `tea` binary or a configured Forgejo/Gitea server.
 
 ## Non-goals
 
