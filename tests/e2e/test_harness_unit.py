@@ -408,6 +408,14 @@ class HarnessUnitTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "refusing"):
             assert_safe_e2e_resource("tea-e2e-other", "abc123")
 
+    def test_cleanup_guard_uses_dokimasia_scoped_disposable_validation(self):
+        from tests.e2e.tea_suite import provision
+
+        with mock.patch("tests.e2e.tea_suite.provision.assert_scoped_disposable_name") as guard:
+            provision.assert_safe_e2e_resource("tea-e2e-abc123", "abc123")
+
+        guard.assert_called_once_with("tea-e2e-abc123", required_prefix="tea-e2e-", run_id="abc123")
+
 
     def test_create_org_and_repo_writes_local_context_without_pushing(self):
         from actions.internal.tea_api import TeaConfig

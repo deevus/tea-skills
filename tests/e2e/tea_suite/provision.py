@@ -9,6 +9,7 @@ from typing import Any
 from urllib import parse, request
 
 from actions.internal.tea_api import TeaConfig, read_tea_config
+from dokimasia.suite.safety import assert_scoped_disposable_name
 
 
 @dataclass
@@ -25,8 +26,7 @@ class ForgejoRun:
 
 
 def assert_safe_e2e_resource(name: str, run_id: str) -> None:
-    if not name.startswith("tea-e2e-") or run_id not in name:
-        raise ValueError(f"refusing to delete non-e2e resource: {name}")
+    assert_scoped_disposable_name(name, required_prefix="tea-e2e-", run_id=run_id)
 
 
 def api_request(config: TeaConfig, method: str, endpoint: str, body: bytes | None = None) -> Any:
