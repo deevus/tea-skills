@@ -8,7 +8,6 @@ from typing import Any
 
 import pytest
 
-from dokimasia.agents.claude_code import ClaudeCodeAdapter
 from dokimasia.agents.pi import PiAdapter
 from dokimasia.pytest import assert_command_ran, cmd
 from dokimasia.suite.layout import create_run_id, prepare_run_root
@@ -52,12 +51,7 @@ def e2e_run_root(run_id: str) -> Path:
 
 
 def make_agent_adapter():
-    agent = os.environ.get("TEA_SKILLS_E2E_AGENT", "claude").lower()
-    if agent == "claude":
-        return ClaudeCodeAdapter(plugin_dir=ROOT)
-    if agent == "pi":
-        return PiAdapter(skills_dir=ROOT / "skills")
-    raise ValueError(f"unknown TEA_SKILLS_E2E_AGENT: {agent}")
+    return PiAdapter(skills_dir=ROOT / "skills", extra_args=["--no-extensions"])
 
 
 def prepare_mock_workspace(workspace: Path) -> None:

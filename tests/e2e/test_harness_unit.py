@@ -41,30 +41,14 @@ def test_e2e_run_root_uses_env_artifact_dir():
     prepare.assert_called_once_with(Path("/tmp/tea-e2e"), "abc123")
 
 
-def test_make_agent_adapter_defaults_to_claude():
-    from dokimasia.agents.claude_code import ClaudeCodeAdapter
-
-    with mock.patch.dict(os.environ, {}, clear=True):
-        adapter = test_agent_e2e.make_agent_adapter()
-
-    assert isinstance(adapter, ClaudeCodeAdapter)
-    assert adapter.plugin_dir == test_agent_e2e.ROOT
-
-
-def test_make_agent_adapter_supports_pi():
+def test_make_agent_adapter_uses_pi_with_checkout_skills():
     from dokimasia.agents.pi import PiAdapter
 
-    with mock.patch.dict(os.environ, {"TEA_SKILLS_E2E_AGENT": "pi"}, clear=True):
-        adapter = test_agent_e2e.make_agent_adapter()
+    adapter = test_agent_e2e.make_agent_adapter()
 
     assert isinstance(adapter, PiAdapter)
     assert adapter.skills_dir == test_agent_e2e.ROOT / "skills"
-
-
-def test_make_agent_adapter_rejects_unknown_agent():
-    with mock.patch.dict(os.environ, {"TEA_SKILLS_E2E_AGENT": "bogus"}, clear=True):
-        with pytest.raises(ValueError, match="unknown TEA_SKILLS_E2E_AGENT: bogus"):
-            test_agent_e2e.make_agent_adapter()
+    assert adapter.extra_args == ("--no-extensions",)
 
 
 def test_mock_e2e_uses_bundled_mock_tea():

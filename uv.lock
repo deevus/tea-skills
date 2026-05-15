@@ -18,7 +18,7 @@ wheels = [
 [[package]]
 name = "dokimasia"
 version = "0.1.0"
-source = { git = "https://github.com/deevus/dokimasia.git#aef0603d5d55fea326071c074c38c43ef76d68e2" }
+source = { git = "https://github.com/deevus/dokimasia.git#562b599c893b316be26204a87a452e30cfe35528" }
 dependencies = [
     { name = "pytest", marker = "python_full_version >= '3.11'" },
     { name = "python-slugify", marker = "python_full_version >= '3.11'" },
