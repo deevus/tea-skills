@@ -11,6 +11,7 @@ import pytest
 from dokimasia.agents.pi import PiAdapter
 from dokimasia.pytest import assert_command_ran, cmd
 from dokimasia.suite.layout import create_run_id, prepare_run_root
+from tests.e2e.tea_suite.mock_forgejo import MockForgejo, create_mock_forgejo
 from tests.e2e.tea_suite.mock_tea import MockTea, create_mock_tea, save_mock_tea_state
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -37,6 +38,8 @@ class MockTeaRun:
     workspace: Path
     artifact_dir: Path
     tea: MockTea
+    forgejo: MockForgejo
+    action_audit_log: Path
 
 
 pytestmark = pytest.mark.skipif(
@@ -66,9 +69,15 @@ def make_agent_adapter():
     return PiAdapter(skills_dir=ROOT / "skills", extra_args=["--no-extensions"])
 
 
-def e2e_env(mock_tea: MockTea) -> dict[str, str]:
+def e2e_env(
+    mock_tea: MockTea, mock_forgejo: MockForgejo | None = None, action_audit_log: Path | None = None
+) -> dict[str, str]:
     env = mock_tea.env_with_path(os.environ)
     env.setdefault("DOKIMASIA_MODEL", DEFAULT_DOKIMASIA_MODEL)
+    if mock_forgejo is not None:
+        env.update(mock_forgejo.env())
+    if action_audit_log is not None:
+        env["TEA_SKILLS_AUDIT_LOG"] = str(action_audit_log)
     return env
 
 
@@ -126,12 +135,18 @@ def mock_tea_run(mock_run_id: str) -> MockTeaRun:
     artifact_dir = root / "artifacts"
     prepare_mock_workspace(workspace)
     artifact_dir.mkdir(parents=True, exist_ok=True)
-    return MockTeaRun(
-        run_id=mock_run_id,
-        workspace=workspace,
-        artifact_dir=artifact_dir,
-        tea=create_mock_tea(root / "mock-tea"),
-    )
+    mock_forgejo = create_mock_forgejo(root / "mock-forgejo")
+    try:
+        yield MockTeaRun(
+            run_id=mock_run_id,
+            workspace=workspace,
+            artifact_dir=artifact_dir,
+            tea=create_mock_tea(root / "mock-tea"),
+            forgejo=mock_forgejo,
+            action_audit_log=root / "action-audit.jsonl",
+        )
+    finally:
+        mock_forgejo.close()
 
 
 def test_create_issue_from_body_file_with_pytest_dokimasia_api(doki_factory, mock_tea_run: MockTeaRun):
@@ -183,3 +198,59 @@ def test_list_issue_domain_with_pytest_dokimasia_api(doki_factory, mock_tea_run:
     assert_command_ran(result, ISSUE_SHOW)
     assert (mock_tea_run.workspace / "first-issue-body.txt").read_text(encoding="utf-8").strip() == body
     assert len(result.commands) <= 12
+
+
+def action_audit_events(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    import json
+
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+
+
+def test_issue_dependency_action_with_pytest_dokimasia_api(doki_factory, mock_tea_run: MockTeaRun):
+    doki = doki_factory(
+        agent=make_agent_adapter(),
+        workspace=mock_tea_run.workspace,
+        artifact_dir=mock_tea_run.artifact_dir,
+        run_id=mock_tea_run.run_id,
+        env=e2e_env(mock_tea_run.tea, mock_tea_run.forgejo, mock_tea_run.action_audit_log),
+        spies=[TEA],
+    )
+
+    result = doki.run(
+        "Make issue #2 depend on issue #1.",
+        artifact_name="issue dependency action",
+    )
+
+    assert result.ok, result.failure_summary
+    assert result.has_skill_loaded("issue-dependencies")
+    assert any(
+        event["action"] == "actions/issues/dependency-add.py" and event["argv"] == ["2", "1"]
+        for event in action_audit_events(mock_tea_run.action_audit_log)
+    )
+    assert mock_tea_run.forgejo.load_state()["dependencies"] == {"2": [1]}
+
+
+def test_issue_moderation_action_with_pytest_dokimasia_api(doki_factory, mock_tea_run: MockTeaRun):
+    doki = doki_factory(
+        agent=make_agent_adapter(),
+        workspace=mock_tea_run.workspace,
+        artifact_dir=mock_tea_run.artifact_dir,
+        run_id=mock_tea_run.run_id,
+        env=e2e_env(mock_tea_run.tea, mock_tea_run.forgejo, mock_tea_run.action_audit_log),
+        spies=[TEA],
+    )
+
+    result = doki.run(
+        "Lock issue #1 as spam.",
+        artifact_name="issue moderation action",
+    )
+
+    assert result.ok, result.failure_summary
+    assert result.has_skill_loaded("issue-moderation")
+    assert any(
+        event["action"] == "actions/issues/lock.py" and event["argv"] == ["1", "spam"]
+        for event in action_audit_events(mock_tea_run.action_audit_log)
+    )
+    assert mock_tea_run.forgejo.load_state()["locks"] == {"1": "spam"}

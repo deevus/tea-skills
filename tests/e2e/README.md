@@ -37,7 +37,7 @@ Artifacts are stored under `.e2e-artifacts/<run-id>/` by default. Override the a
 TEA_SKILLS_E2E=1 TEA_SKILLS_E2E_ARTIFACT_DIR=/tmp/tea-skills-e2e uv run --group e2e pytest tests/e2e/test_agent_e2e.py -v
 ```
 
-## Mock tea behavior
+## Mock tea and Forgejo behavior
 
 The test creates a local executable named `tea` before constructing the Dokimasia run. Dokimasia's `cmd.spy("tea")` wraps that mock executable, so `result.commands` and `assert_command_ran(...)` use the normal Dokimasia command assertion path without delegating to a system executable.
 
@@ -52,6 +52,8 @@ The mock stores issue state in JSON under the run artifact root and renders outp
 - `tea issues show <number>`
 
 Issue command aliases such as `tea issue c ...`, `tea i ls`, and `tea issue <number>` are also handled when they are part of the tested workflow. The E2E assertion verifies local mock state instead of querying a remote service.
+
+Bundled issue-action E2E tests run the real action executables under `actions/issues/` against a local mock Forgejo API server. The fixture writes a temporary `tea` config (`XDG_CONFIG_HOME`) pointing at that server and sets `TEA_SKILLS_AUDIT_LOG`, so tests can assert both the user-visible API side effect and the specific bundled action that ran.
 
 ## Fixture pack maintenance
 
@@ -74,4 +76,4 @@ The E2E harness uses Dokimasia only for generic pytest-first suite mechanics:
 - `dokimasia.pytest.assert_command_ran` asserts observed command invocations.
 - `dokimasia.suite.layout` creates run ids and artifact directories.
 
-Mock `tea` behavior, fixture packs, local issue state, executable choices, and state assertions remain in tea-skills under `tests/e2e/`. Dokimasia stays domain-neutral.
+Mock `tea` behavior, mock Forgejo API behavior, fixture packs, local issue state, executable choices, and state assertions remain in tea-skills under `tests/e2e/`. Dokimasia stays domain-neutral.
