@@ -14,7 +14,7 @@ except ImportError:
 class RepositoryScope:
     def __init__(self, api: GiteaAdapter | None = None, repo: RepoContext | None = None):
         self.api = api or GiteaAdapter()
-        self.repo = repo or discover_repo_context()
+        self.repo = repo or discover_repo_context(self.api.config.base_url)
 
     @property
     def owner(self) -> str:

@@ -126,6 +126,39 @@ class TeaApiCoreTests(unittest.TestCase):
         with mock.patch("subprocess.run", return_value=completed):
             self.assertEqual(tea_api.discover_repo_context(), tea_api.RepoContext("owner", "repo"))
 
+    def test_repository_scope_prefers_remote_matching_adapter_base_url(self):
+        def fake_run(args, check, text, stdout, stderr):
+            if args == ["git", "remote", "-v"]:
+                return subprocess.CompletedProcess(
+                    args=args,
+                    returncode=0,
+                    stdout=(
+                        "origin\tgit@github.com:deevus/tea-skills.git (fetch)\n"
+                        "origin\tgit@github.com:deevus/tea-skills.git (push)\n"
+                        "self-hosted\tssh://git@forgejo.tail9a847c.ts.net/sh/tea-skills.git (fetch)\n"
+                        "self-hosted\tssh://git@forgejo.tail9a847c.ts.net/sh/tea-skills.git (push)\n"
+                    ),
+                    stderr="",
+                )
+            if args == ["git", "remote", "get-url", "origin"]:
+                return subprocess.CompletedProcess(
+                    args=args,
+                    returncode=0,
+                    stdout="git@github.com:deevus/tea-skills.git\n",
+                    stderr="",
+                )
+            raise AssertionError(f"unexpected command: {args}")
+
+        api = tea_api.GiteaAdapter(
+            tea_api.TeaConfig("t", "https://forgejo.tail9a847c.ts.net"),
+            opener=lambda request: None,
+        )
+
+        with mock.patch("subprocess.run", side_effect=fake_run):
+            scope = repo_scope.RepositoryScope(api)
+
+        self.assertEqual(scope.repo, tea_api.RepoContext("sh", "tea-skills"))
+
     def test_edit_issue_comment_sends_body(self):
         calls = []
         scope = self.make_repo_scope(lambda request: calls.append(request) or tea_api.FakeHttpResponse(200, {"id": 12}))
