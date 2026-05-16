@@ -28,7 +28,7 @@ mise run lint
 mise run format
 ```
 
-`mise install` installs hk hooks with `hk install --mise`; `mise run lint` runs `hk check --all`, and `mise run format` runs `hk fix --all`.
+`mise install` installs hk hooks with `hk install --mise`; `mise run lint` runs `hk check --all`, and `mise run format` runs `hk fix --all`. `hk check --all` also runs the README drift check, which verifies that the public README stays aligned with skill directories, bundled action domain docs, and core plugin metadata.
 
 ## Repository structure
 

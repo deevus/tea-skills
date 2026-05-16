@@ -6,6 +6,10 @@ local python_steps = new Mapping<String, Step> {
   ["ruff_format"] = (Builtins.ruff_format) {
     depends = "ruff"
   }
+  ["readme_drift"] = new Step {
+    glob = List("README.md", "skills/**/SKILL.md", "actions/*/README.md", ".claude-plugin/*.json")
+    check = "python3 tools/check_readme_drift.py"
+  }
 }
 
 hooks {
