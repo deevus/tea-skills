@@ -33,6 +33,10 @@ tea pulls resolve 123
 tea pulls unresolve 123
 ```
 
+## Forks and Upstream PRs
+
+See [pull-request-forks](../pull-request-forks.md).
+
 For interactive inline review, use:
 
 ```bash

@@ -29,6 +29,10 @@ tea pulls list --output json | \
   jq '.[] | select(.labels | map(.name) | index("needs-review")) | {index, title, author: .poster.login}'
 ```
 
+## Forks and Upstream PRs
+
+See [pull-request-forks](../pull-request-forks.md).
+
 ## Tips
 
 - Prefer `-o simple` for listing; use `--output json` only when parsing with `jq`
