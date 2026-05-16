@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -9,7 +10,8 @@ from typing import Any
 import pytest
 
 from dokimasia.agents.pi import PiAdapter
-from dokimasia.pytest import assert_command_ran, cmd
+from dokimasia.pytest import assert_invoked, cmd
+from dokimasia.suite import create_file_spy
 from dokimasia.suite.layout import create_run_id, prepare_run_root
 from tests.e2e.tea_suite.mock_forgejo import MockForgejo, create_mock_forgejo
 from tests.e2e.tea_suite.mock_tea import MockTea, create_mock_tea, save_mock_tea_state
@@ -28,6 +30,9 @@ ISSUE_SHOW = TEA.match(
         )
     ),
 )
+DEPENDENCY_ADD_ACTION = cmd.match("actions/issues/dependency-add.py", pattern=["2", "1"], mode="exact")
+LOCK_ACTION = cmd.match("actions/issues/lock.py", pattern=["1", "spam"], mode="exact")
+ACTION_FILE_SPIES = ("actions/issues/dependency-add.py", "actions/issues/lock.py")
 DEFAULT_DOKIMASIA_MODEL = "deepseek/deepseek-v4-flash"
 MOCK_ORIGIN_URL = "https://mock.invalid/sh/mock-repo.git"
 
@@ -39,7 +44,7 @@ class MockTeaRun:
     artifact_dir: Path
     tea: MockTea
     forgejo: MockForgejo
-    action_audit_log: Path
+    plugin_root: Path
 
 
 pytestmark = pytest.mark.skipif(
@@ -65,28 +70,28 @@ def e2e_run_root(run_id: str) -> Path:
     return prepare_run_root(base, run_id)
 
 
-def make_agent_adapter():
-    return PiAdapter(skills_dir=ROOT / "skills", extra_args=["--no-extensions"])
+def make_agent_adapter(skills_dir: Path | None = None):
+    return PiAdapter(skills_dir=skills_dir or ROOT / "skills", extra_args=["--no-extensions"])
 
 
-def e2e_env(
-    mock_tea: MockTea, mock_forgejo: MockForgejo | None = None, action_audit_log: Path | None = None
-) -> dict[str, str]:
+def e2e_env(mock_tea: MockTea, mock_forgejo: MockForgejo | None = None) -> dict[str, str]:
     env = mock_tea.env_with_path(os.environ)
     env.setdefault("DOKIMASIA_MODEL", DEFAULT_DOKIMASIA_MODEL)
     if mock_forgejo is not None:
         env.update(mock_forgejo.env())
-    if action_audit_log is not None:
-        env["TEA_SKILLS_AUDIT_LOG"] = str(action_audit_log)
     return env
 
 
-def prepare_mock_workspace(workspace: Path) -> None:
+def prepare_mock_workspace(workspace: Path, plugin_root: Path | None = None) -> None:
     workspace.mkdir(parents=True, exist_ok=True)
-    (workspace / "AGENTS.md").write_text(
-        "# Repository context\n\nThis repository is hosted on Forgejo. Use tea for issue workflows.\n",
-        encoding="utf-8",
-    )
+    context = "# Repository context\n\nThis repository is hosted on Forgejo. Use tea for issue workflows.\n"
+    if plugin_root is not None:
+        context += (
+            "\nThe tea-skills plugin is installed at "
+            f"`{plugin_root}`. Bundled action paths such as `actions/issues/lock.py` "
+            "resolve under that plugin root; run them by absolute path from there.\n"
+        )
+    (workspace / "AGENTS.md").write_text(context, encoding="utf-8")
     subprocess.run(["git", "init", "-q"], cwd=workspace, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     subprocess.run(
         ["git", "remote", "remove", "origin"],
@@ -102,6 +107,23 @@ def prepare_mock_workspace(workspace: Path) -> None:
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
+
+
+def prepare_mock_plugin(plugin_root: Path) -> None:
+    if plugin_root.exists():
+        shutil.rmtree(plugin_root)
+    shutil.copytree(ROOT / "skills", plugin_root / "skills")
+    shutil.copytree(ROOT / "actions", plugin_root / "actions")
+
+
+def install_action_file_spies(plugin_root: Path) -> None:
+    for relative_action in ACTION_FILE_SPIES:
+        create_file_spy(
+            wrapper_path=plugin_root / relative_action,
+            real_executable=ROOT / relative_action,
+            invocation_name=relative_action,
+            source="tea-skills-action",
+        )
 
 
 def assert_single_issue_matches(issues: list[dict[str, Any]], *, title: str, body: str) -> None:
@@ -133,7 +155,10 @@ def mock_tea_run(mock_run_id: str) -> MockTeaRun:
     root = e2e_run_root(mock_run_id)
     workspace = root / "workspace" / "repo"
     artifact_dir = root / "artifacts"
-    prepare_mock_workspace(workspace)
+    plugin_root = root / "plugin"
+    prepare_mock_plugin(plugin_root)
+    install_action_file_spies(plugin_root)
+    prepare_mock_workspace(workspace, plugin_root)
     artifact_dir.mkdir(parents=True, exist_ok=True)
     mock_forgejo = create_mock_forgejo(root / "mock-forgejo")
     try:
@@ -143,17 +168,17 @@ def mock_tea_run(mock_run_id: str) -> MockTeaRun:
             artifact_dir=artifact_dir,
             tea=create_mock_tea(root / "mock-tea"),
             forgejo=mock_forgejo,
-            action_audit_log=root / "action-audit.jsonl",
+            plugin_root=plugin_root,
         )
     finally:
         mock_forgejo.close()
 
 
-def test_create_issue_from_body_file_with_pytest_dokimasia_api(doki_factory, mock_tea_run: MockTeaRun):
+def test_create_issue_from_body_file(doki_factory, mock_tea_run: MockTeaRun):
     title = issue_title_for_run(mock_tea_run.run_id)
     body = issue_body_for_run(mock_tea_run.run_id)
     doki = doki_factory(
-        agent=make_agent_adapter(),
+        agent=make_agent_adapter(mock_tea_run.plugin_root / "skills"),
         workspace=mock_tea_run.workspace,
         artifact_dir=mock_tea_run.artifact_dir,
         run_id=mock_tea_run.run_id,
@@ -169,17 +194,17 @@ def test_create_issue_from_body_file_with_pytest_dokimasia_api(doki_factory, moc
 
     assert result.ok, result.failure_summary
     assert result.has_skill_loaded("create-issue")
-    assert_command_ran(result, ISSUE_CREATE, times=1)
+    assert_invoked(result, ISSUE_CREATE, times=1)
     assert len(result.commands) <= 12
     assert_single_issue_matches(mock_tea_run.tea.load_state()["issues"], title=title, body=body)
 
 
-def test_list_issue_domain_with_pytest_dokimasia_api(doki_factory, mock_tea_run: MockTeaRun):
+def test_list_issue_domain(doki_factory, mock_tea_run: MockTeaRun):
     title = f"E2E {mock_tea_run.run_id} issue domain list"
     body = f"E2E issue domain body marker: {mock_tea_run.run_id}"
     seed_mock_issue(mock_tea_run.tea, title=title, body=body)
     doki = doki_factory(
-        agent=make_agent_adapter(),
+        agent=make_agent_adapter(mock_tea_run.plugin_root / "skills"),
         workspace=mock_tea_run.workspace,
         artifact_dir=mock_tea_run.artifact_dir,
         run_id=mock_tea_run.run_id,
@@ -188,33 +213,25 @@ def test_list_issue_domain_with_pytest_dokimasia_api(doki_factory, mock_tea_run:
     )
 
     result = doki.run(
-        "List open issues and save the body of the first issue to first-issue-body.txt.",
+        "List open Forgejo issues and save the body of the first issue to first-issue-body.txt.",
         artifact_name="list issue domain",
     )
 
     assert result.ok, result.failure_summary
     assert result.has_skill_loaded("list-issues")
-    assert_command_ran(result, ISSUE_LIST)
-    assert_command_ran(result, ISSUE_SHOW)
+    assert_invoked(result, ISSUE_LIST)
+    assert_invoked(result, ISSUE_SHOW)
     assert (mock_tea_run.workspace / "first-issue-body.txt").read_text(encoding="utf-8").strip() == body
     assert len(result.commands) <= 12
 
 
-def action_audit_events(path: Path) -> list[dict[str, Any]]:
-    if not path.exists():
-        return []
-    import json
-
-    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
-
-
-def test_issue_dependency_action_with_pytest_dokimasia_api(doki_factory, mock_tea_run: MockTeaRun):
+def test_issue_dependency_action(doki_factory, mock_tea_run: MockTeaRun):
     doki = doki_factory(
-        agent=make_agent_adapter(),
+        agent=make_agent_adapter(mock_tea_run.plugin_root / "skills"),
         workspace=mock_tea_run.workspace,
         artifact_dir=mock_tea_run.artifact_dir,
         run_id=mock_tea_run.run_id,
-        env=e2e_env(mock_tea_run.tea, mock_tea_run.forgejo, mock_tea_run.action_audit_log),
+        env=e2e_env(mock_tea_run.tea, mock_tea_run.forgejo),
         spies=[TEA],
     )
 
@@ -225,20 +242,17 @@ def test_issue_dependency_action_with_pytest_dokimasia_api(doki_factory, mock_te
 
     assert result.ok, result.failure_summary
     assert result.has_skill_loaded("issue-dependencies")
-    assert any(
-        event["action"] == "actions/issues/dependency-add.py" and event["argv"] == ["2", "1"]
-        for event in action_audit_events(mock_tea_run.action_audit_log)
-    )
+    assert_invoked(result, DEPENDENCY_ADD_ACTION, times=1)
     assert mock_tea_run.forgejo.load_state()["dependencies"] == {"2": [1]}
 
 
-def test_issue_moderation_action_with_pytest_dokimasia_api(doki_factory, mock_tea_run: MockTeaRun):
+def test_issue_moderation_action(doki_factory, mock_tea_run: MockTeaRun):
     doki = doki_factory(
-        agent=make_agent_adapter(),
+        agent=make_agent_adapter(mock_tea_run.plugin_root / "skills"),
         workspace=mock_tea_run.workspace,
         artifact_dir=mock_tea_run.artifact_dir,
         run_id=mock_tea_run.run_id,
-        env=e2e_env(mock_tea_run.tea, mock_tea_run.forgejo, mock_tea_run.action_audit_log),
+        env=e2e_env(mock_tea_run.tea, mock_tea_run.forgejo),
         spies=[TEA],
     )
 
@@ -249,8 +263,5 @@ def test_issue_moderation_action_with_pytest_dokimasia_api(doki_factory, mock_te
 
     assert result.ok, result.failure_summary
     assert result.has_skill_loaded("issue-moderation")
-    assert any(
-        event["action"] == "actions/issues/lock.py" and event["argv"] == ["1", "spam"]
-        for event in action_audit_events(mock_tea_run.action_audit_log)
-    )
+    assert_invoked(result, LOCK_ACTION, times=1)
     assert mock_tea_run.forgejo.load_state()["locks"] == {"1": "spam"}

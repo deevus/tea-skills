@@ -159,6 +159,62 @@ def test_issue_show_matcher_accepts_detail_commands_without_pinning_issue_number
     assert not test_agent_e2e.ISSUE_SHOW.matches({"source": "tea", "argv": ["issues", "list"], "exit_code": 0})
 
 
+def test_action_matchers_accept_file_spy_invocations():
+    dependency_invocation = {
+        "action": "actions/issues/dependency-add.py",
+        "argv": ["2", "1"],
+        "exit_code": 0,
+    }
+    lock_invocation = {"action": "actions/issues/lock.py", "argv": ["1", "spam"], "exit_code": 0}
+
+    assert test_agent_e2e.DEPENDENCY_ADD_ACTION.matches(dependency_invocation)
+    assert test_agent_e2e.LOCK_ACTION.matches(lock_invocation)
+    assert not test_agent_e2e.LOCK_ACTION.matches(dependency_invocation)
+
+
+def test_prepare_mock_plugin_copies_skills_and_actions(tmp_path):
+    plugin_root = tmp_path / "plugin"
+
+    test_agent_e2e.prepare_mock_plugin(plugin_root)
+
+    assert (plugin_root / "skills" / "issue-dependencies" / "SKILL.md").exists()
+    assert (plugin_root / "actions" / "issues" / "dependency-add.py").exists()
+    assert (plugin_root / "actions" / "internal" / "tea_api.py").exists()
+
+
+def test_install_action_file_spies_wraps_workspace_actions(tmp_path):
+    plugin_root = tmp_path / "plugin"
+    command_log = tmp_path / "commands.jsonl"
+    test_agent_e2e.prepare_mock_plugin(plugin_root)
+    action_path = plugin_root / "actions" / "issues" / "dependency-add.py"
+    original = action_path.read_text(encoding="utf-8")
+
+    test_agent_e2e.install_action_file_spies(plugin_root)
+
+    assert action_path.read_text(encoding="utf-8") != original
+    completed = subprocess.run(
+        [str(action_path), "--help"],
+        env={**os.environ, "DOKIMASIA_COMMAND_LOG": str(command_log)},
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    events = [json.loads(line) for line in command_log.read_text(encoding="utf-8").splitlines()]
+
+    assert completed.returncode == 0
+    assert events == [
+        {
+            **{key: events[0][key] for key in ["cwd", "pid", "timestamp"]},
+            "action": "actions/issues/dependency-add.py",
+            "argv": ["--help"],
+            "exit_code": 0,
+            "phase": "finish",
+            "source": "tea-skills-action",
+        }
+    ]
+
+
 def test_assert_single_issue_matches_checks_count_state_and_body():
     test_agent_e2e.assert_single_issue_matches(
         [
