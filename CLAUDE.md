@@ -50,7 +50,7 @@ Private HTTP support lives in `actions/internal/tea_api.py`. It is stdlib-only P
 - In skill docs, `actions/<domain>/<action>` means the bundled plugin action path, not a path in the user's repo
 - Labels are referenced by **name** in `tea issues` but by **ID** in `tea labels update/delete`
 - Milestones are referenced by **name** in CLI but by **ID** in the API-backed milestone edit action
-- All API-backed actions derive repo context from the git remote URL automatically
+- Repository-targeting behavior is origin-first: prefer `origin` unless the user states or requests another backend, login, remote, or repository. API-backed actions may accept explicit scope flags for non-origin targets.
 
 ## Adding a New Skill
 
