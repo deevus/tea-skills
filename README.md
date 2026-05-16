@@ -91,30 +91,33 @@ For more detail, see [`actions/README.md`](actions/README.md) and [`CONTRIBUTING
 - "Add this issue to the v1.0 milestone."
 - "Find issues that are ready because their dependencies are closed."
 
-## Skills
+## Supported workflows
 
-Each skill is a focused, user-invokable `skills/<name>/SKILL.md` file.
+`tea-skills` keeps `tea` as the primary workflow engine. Skills should use normal `tea` commands whenever `tea` supports the task, then fall back to bundled actions only for known Gitea/Forgejo API gaps.
 
-| Domain | Skills |
-|---|---|
-| Issues | `list-issues`, `create-issue`, `edit-issues`, `close-issues`, `issue-comments`, `issue-dependencies`, `issue-moderation` |
-| Pull Requests | `list-pulls`, `create-pull`, `review-pull`, `merge-pull`, `close-pulls` |
-| Milestones | `milestones`, `milestone-issues` |
-| Labels | `labels`, `label-schemes` |
-| API | `using-the-tea-api` |
+Each skill is a focused, user-invokable `skills/<name>/SKILL.md` file. The current inventory is grouped by workflow domain:
 
-## Actions
+| Domain | What users can ask an agent to do | Skills |
+|---|---|---|
+| Issues | List and inspect issues, create and edit issues, close or reopen issues, manage comments, manage dependencies, and moderate issues with pins, locks, and reactions. | `list-issues`, `create-issue`, `edit-issues`, `close-issues`, `issue-comments`, `issue-dependencies`, `issue-moderation` |
+| Pull Requests | List and inspect PRs, create PRs, request or perform reviews, resolve review threads, merge PRs, configure merge behavior, and close or reopen PRs. | `list-pulls`, `create-pull`, `review-pull`, `merge-pull`, `close-pulls` |
+| Milestones | List, create, edit, close, reopen, and delete milestones, plus move issues into or out of milestones. | `milestones`, `milestone-issues` |
+| Labels | Manage repository labels, label schemes, bulk label operations, and organization-level labels. | `labels`, `label-schemes` |
 
-Bundled actions cover API-only operations: features Gitea/Forgejo supports but the `tea` CLI does not expose cleanly. Actions supplement `tea`; they do not replace it.
+## Bundled actions and trust model
 
-See [`actions/README.md`](actions/README.md) and the domain README files for exact commands and arguments.
+Bundled actions are small Python executables shipped with this plugin. They supplement `tea`; they do not replace it. Use them for API-only operations that Gitea/Forgejo supports but `tea` does not expose cleanly, such as issue dependencies, issue moderation, pull-request auto-merge configuration, milestone edit gaps, and organization labels.
+
+Actions run on your machine with your user privileges, read the authentication configured by `tea login`, and derive the target owner/repository from the `origin` remote of the repository where the action is executed. When an agent runs a bundled action for your project, it should resolve the action path from the installed plugin and keep its working directory in your target repository.
+
+See [`actions/README.md`](actions/README.md) and the domain references for exact commands and arguments:
 
 | Domain | Reference |
 |---|---|
-| Issues | `actions/issues/README.md` |
-| Pull Requests | `actions/pull-requests/README.md` |
-| Milestones | `actions/milestones/README.md` |
-| Organization Labels | `actions/org-labels/README.md` |
+| Issues | [`actions/issues/README.md`](actions/issues/README.md) |
+| Pull Requests | [`actions/pull-requests/README.md`](actions/pull-requests/README.md) |
+| Milestones | [`actions/milestones/README.md`](actions/milestones/README.md) |
+| Organization Labels | [`actions/org-labels/README.md`](actions/org-labels/README.md) |
 
 ## Contributing
 

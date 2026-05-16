@@ -16,7 +16,6 @@ Each skill lives in its own directory with a single `skills/<name>/SKILL.md` fil
 **Pulls domain:** `list-pulls`, `create-pull`, `review-pull`, `merge-pull`, `close-pulls`
 **Milestones domain:** `milestones`, `milestone-issues`
 **Labels domain:** `labels`, `label-schemes`
-**API:** `using-the-tea-api`
 
 ### Skill Routing
 
