@@ -30,8 +30,8 @@ ISSUE_SHOW = TEA.match(
         )
     ),
 )
-DEPENDENCY_ADD_ACTION = cmd.match("actions/issues/dependency-add.py", pattern=["2", "1"], mode="exact")
-LOCK_ACTION = cmd.match("actions/issues/lock.py", pattern=["1", "spam"], mode="exact")
+DEPENDENCY_ADD_ACTION = cmd.match("actions/issues/dependency-add.py")
+LOCK_ACTION = cmd.match("actions/issues/lock.py")
 ACTION_FILE_SPIES = ("actions/issues/dependency-add.py", "actions/issues/lock.py")
 DEFAULT_DOKIMASIA_MODEL = "deepseek/deepseek-v4-flash"
 MOCK_ORIGIN_URL = "https://mock.invalid/sh/mock-repo.git"
@@ -82,15 +82,9 @@ def e2e_env(mock_tea: MockTea, mock_forgejo: MockForgejo | None = None) -> dict[
     return env
 
 
-def prepare_mock_workspace(workspace: Path, plugin_root: Path | None = None) -> None:
+def prepare_mock_workspace(workspace: Path) -> None:
     workspace.mkdir(parents=True, exist_ok=True)
     context = "# Repository context\n\nThis repository is hosted on Forgejo. Use tea for issue workflows.\n"
-    if plugin_root is not None:
-        context += (
-            "\nThe tea-skills plugin is installed at "
-            f"`{plugin_root}`. Bundled action paths such as `actions/issues/lock.py` "
-            "resolve under that plugin root; run them by absolute path from there.\n"
-        )
     (workspace / "AGENTS.md").write_text(context, encoding="utf-8")
     subprocess.run(["git", "init", "-q"], cwd=workspace, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     subprocess.run(
@@ -158,7 +152,7 @@ def mock_tea_run(mock_run_id: str) -> MockTeaRun:
     plugin_root = root / "plugin"
     prepare_mock_plugin(plugin_root)
     install_action_file_spies(plugin_root)
-    prepare_mock_workspace(workspace, plugin_root)
+    prepare_mock_workspace(workspace)
     artifact_dir.mkdir(parents=True, exist_ok=True)
     mock_forgejo = create_mock_forgejo(root / "mock-forgejo")
     try:

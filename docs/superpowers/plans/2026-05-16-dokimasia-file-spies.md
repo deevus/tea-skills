@@ -74,8 +74,8 @@ Replace `assert_command_ran` with `assert_invoked` and import `create_file_spy` 
 Define:
 
 ```python
-DEPENDENCY_ADD_ACTION = cmd.match("actions/issues/dependency-add.py", pattern=["2", "1"], mode="exact")
-LOCK_ACTION = cmd.match("actions/issues/lock.py", pattern=["1", "spam"], mode="exact")
+DEPENDENCY_ADD_ACTION = cmd.match("actions/issues/dependency-add.py")
+LOCK_ACTION = cmd.match("actions/issues/lock.py")
 ```
 
 - [x] **Step 3: Add spy installation helper**

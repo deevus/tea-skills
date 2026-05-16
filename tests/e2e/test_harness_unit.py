@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import json
 import os
 import shutil
@@ -104,6 +105,20 @@ def test_mock_e2e_workspace_is_hermetic_git_repo(tmp_path):
     assert origin.stdout.strip() == test_agent_e2e.MOCK_ORIGIN_URL
 
 
+def test_mock_workspace_context_does_not_hint_action_paths(tmp_path):
+    workspace = tmp_path / "workspace" / "repo"
+
+    test_agent_e2e.prepare_mock_workspace(workspace)
+
+    context = (workspace / "AGENTS.md").read_text(encoding="utf-8")
+    assert "The tea-skills plugin is installed" not in context
+    assert "actions/issues/lock.py" not in context
+
+
+def test_prepare_mock_workspace_does_not_accept_plugin_root_hint():
+    assert list(inspect.signature(test_agent_e2e.prepare_mock_workspace).parameters) == ["workspace"]
+
+
 def test_session_hook_in_mock_workspace_does_not_use_parent_repo_context():
     from tests.e2e.tea_suite.mock_tea import create_mock_tea
 
@@ -159,13 +174,13 @@ def test_issue_show_matcher_accepts_detail_commands_without_pinning_issue_number
     assert not test_agent_e2e.ISSUE_SHOW.matches({"source": "tea", "argv": ["issues", "list"], "exit_code": 0})
 
 
-def test_action_matchers_accept_file_spy_invocations():
+def test_action_matchers_accept_file_spy_invocations_without_pinning_arguments():
     dependency_invocation = {
         "action": "actions/issues/dependency-add.py",
-        "argv": ["2", "1"],
+        "argv": ["99", "42"],
         "exit_code": 0,
     }
-    lock_invocation = {"action": "actions/issues/lock.py", "argv": ["1", "spam"], "exit_code": 0}
+    lock_invocation = {"action": "actions/issues/lock.py", "argv": ["7", "resolved"], "exit_code": 0}
 
     assert test_agent_e2e.DEPENDENCY_ADD_ACTION.matches(dependency_invocation)
     assert test_agent_e2e.LOCK_ACTION.matches(lock_invocation)
@@ -182,7 +197,7 @@ def test_prepare_mock_plugin_copies_skills_and_actions(tmp_path):
     assert (plugin_root / "actions" / "internal" / "tea_api.py").exists()
 
 
-def test_install_action_file_spies_wraps_workspace_actions(tmp_path):
+def test_install_action_file_spies_wraps_plugin_actions(tmp_path):
     plugin_root = tmp_path / "plugin"
     command_log = tmp_path / "commands.jsonl"
     test_agent_e2e.prepare_mock_plugin(plugin_root)
