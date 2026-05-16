@@ -73,6 +73,15 @@ Then try a small prompt in your agent:
 
 > List the open issues in this repository.
 
+## Troubleshooting
+
+- **`tea` is missing or not on `PATH`:** install the [tea CLI](https://gitea.com/gitea/tea), restart your shell or agent session, then confirm `tea --version` works from the target repository.
+- **No tea login is configured:** run `tea login add`, then `tea login list`. Bundled actions read the same tea authentication configuration.
+- **Bundled actions fail with Python errors:** confirm `python3 --version` reports Python 3.10 or newer. The bundled actions are Python scripts and use the `python3` found on `PATH`.
+- **A skill does not work as expected:** please create an issue with the prompt you used, the command or error the agent reported, and your agent/tea-skills installation method.
+
+For more detail, see [`actions/README.md`](actions/README.md) and [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
 ## Example prompts
 
 - "List open issues and summarize the top three that look ready to work on."
