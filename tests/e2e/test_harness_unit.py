@@ -174,6 +174,45 @@ def test_issue_show_matcher_accepts_detail_commands_without_pinning_issue_number
     assert not test_agent_e2e.ISSUE_SHOW.matches({"source": "tea", "argv": ["issues", "list"], "exit_code": 0})
 
 
+def test_issue_show_matcher_accepts_repository_scoped_detail_commands():
+    commands = [
+        {"source": "tea", "argv": ["issues", "--remote", "origin", "1"], "exit_code": 0},
+        {"source": "tea", "argv": ["issue", "--repo", "owner/repo", "show", "42"], "exit_code": 0},
+        {"source": "tea", "argv": ["i", "--login", "forgejo", "--remote", "upstream", "s", "99"], "exit_code": 0},
+    ]
+
+    assert all(test_agent_e2e.ISSUE_SHOW.matches(command) for command in commands)
+
+
+def test_issue_show_matcher_rejects_repository_scoped_list_commands_with_numeric_flags():
+    commands = [
+        {"source": "tea", "argv": ["issues", "--remote", "origin", "list", "--limit", "1"], "exit_code": 0},
+        {"source": "tea", "argv": ["issue", "--repo", "owner/repo", "list", "--page", "2"], "exit_code": 0},
+    ]
+
+    assert not any(test_agent_e2e.ISSUE_SHOW.matches(command) for command in commands)
+
+
+def test_mock_tea_accepts_repository_scoped_issue_show(tmp_path):
+    from tests.e2e.tea_suite.mock_tea import create_mock_tea, load_mock_tea_state, run_mock_tea, save_mock_tea_state
+
+    mock_tea = create_mock_tea(tmp_path / "mock-tea")
+    state = load_mock_tea_state(mock_tea.state_path)
+    state["issues"].append({"number": 1, "title": "Scoped", "body": "Scoped body", "state": "open"})
+    save_mock_tea_state(mock_tea.state_path, state)
+
+    stdout, stderr, exit_code = run_mock_tea(
+        ["issues", "--remote", "origin", "1"],
+        state_path=mock_tea.state_path,
+        fixture_pack_dir=mock_tea.fixture_pack_dir,
+        cwd=tmp_path,
+    )
+
+    assert exit_code == 0
+    assert stderr == ""
+    assert "Scoped body" in stdout
+
+
 def test_action_matchers_accept_file_spy_invocations_without_pinning_arguments():
     dependency_invocation = {
         "action": "actions/issues/dependency-add.py",

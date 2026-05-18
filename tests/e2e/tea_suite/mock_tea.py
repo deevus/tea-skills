@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
+from tests.e2e.tea_suite.repository_scope_args import without_repository_scope_args
+
 DEFAULT_FIXTURE_PACK = Path(__file__).resolve().parent / "fixtures" / "tea" / "fixture-pack-v1"
 DEFAULT_STATE: dict[str, Any] = {"next_issue_number": 1, "issues": []}
 
@@ -142,6 +144,8 @@ def _run_issues(
     fixture_pack_dir: Path,
     cwd: Path,
 ) -> tuple[str, str, int]:
+    argv = without_repository_scope_args(argv)
+
     if not argv:
         return _issues_list(state_path=state_path, fixture_pack_dir=fixture_pack_dir)
 
