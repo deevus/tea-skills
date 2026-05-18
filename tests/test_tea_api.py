@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 import subprocess
@@ -66,6 +67,50 @@ class TeaApiCoreTests(unittest.TestCase):
             tea_api.parse_repo_remote("git@forge.example:owner/repo.git"),
             ("owner", "repo"),
         )
+
+    def test_add_repository_scope_arguments_uses_tea_flag_names_and_aliases(self):
+        parser = argparse.ArgumentParser(prog="action")
+
+        repo_scope.add_repository_scope_arguments(parser)
+        args = parser.parse_args(
+            [
+                "--login",
+                "codeberg.org",
+                "--remote",
+                "codeberg",
+                "--repo",
+                "deevus/tea-skills",
+            ]
+        )
+
+        self.assertEqual(
+            repo_scope.repository_scope_options_from_args(args),
+            repo_scope.RepositoryScopeOptions(
+                login="codeberg.org",
+                remote="codeberg",
+                repo="deevus/tea-skills",
+            ),
+        )
+
+    def test_add_repository_scope_arguments_supports_tea_short_aliases(self):
+        parser = argparse.ArgumentParser(prog="action")
+
+        repo_scope.add_repository_scope_arguments(parser)
+        args = parser.parse_args(["-l", "forgejo", "-R", "self-hosted", "-r", "sh/tea-skills"])
+
+        self.assertEqual(args.login, "forgejo")
+        self.assertEqual(args.remote, "self-hosted")
+        self.assertEqual(args.repo, "sh/tea-skills")
+
+    def test_default_repo_scope_accepts_parsed_scope_options_without_action_glue(self):
+        options = repo_scope.RepositoryScopeOptions(login="forgejo", remote="self-hosted", repo="sh/tea-skills")
+        api = tea_api.GiteaAdapter(tea_api.TeaConfig("t", "https://forge.example"), opener=lambda request: None)
+
+        with mock.patch.object(repo_scope, "discover_repo_context", return_value=tea_api.RepoContext("owner", "repo")):
+            scope = repo_scope.default_repo_scope(api=api, options=options)
+
+        self.assertEqual(scope.repo, tea_api.RepoContext("owner", "repo"))
+        self.assertIs(scope.scope_options, options)
 
     def test_build_url_encodes_query_values(self):
         config = tea_api.TeaConfig(token="t", base_url="https://forge.example")
