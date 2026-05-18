@@ -3,14 +3,15 @@
 from __future__ import annotations
 
 import argparse
+import subprocess
 from dataclasses import dataclass
 from typing import Any, Mapping
 from urllib import parse
 
 try:
-    from .tea_api import GiteaAdapter, RepoContext, discover_repo_context
+    from .tea_api import GiteaAdapter, RepoContext, RepoContextError, discover_repo_context, parse_repo_remote
 except ImportError:
-    from tea_api import GiteaAdapter, RepoContext, discover_repo_context
+    from tea_api import GiteaAdapter, RepoContext, RepoContextError, discover_repo_context, parse_repo_remote
 
 
 @dataclass(frozen=True)
@@ -51,6 +52,50 @@ def repository_scope_options_from_args(args: argparse.Namespace) -> RepositorySc
     )
 
 
+def repo_context_from_slug(slug: str) -> RepoContext:
+    """Parse an explicit owner/repository selector from --repo."""
+    value = slug.strip()
+    parts = value.split("/")
+    if len(parts) != 2 or not parts[0] or not parts[1]:
+        raise RepoContextError(
+            f"invalid --repo value {slug!r}; expected owner/repo syntax (for example: --repo owner/repo)"
+        )
+    return RepoContext(owner=parts[0], repo=parts[1])
+
+
+def repo_context_from_remote(remote: str) -> RepoContext:
+    """Resolve an explicit git remote name into an owner/repository context."""
+    try:
+        completed = subprocess.run(
+            ["git", "remote", "get-url", remote],
+            check=False,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+    except OSError as exc:
+        raise RepoContextError(f"failed to read --remote {remote}: {exc}") from exc
+
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or f"git remote {remote!r} was not found"
+        raise RepoContextError(
+            f"failed to read --remote {remote}: {detail}. "
+            f"Use --repo owner/repo or add the remote with: git remote add {remote} <url>"
+        )
+
+    owner, repo = parse_repo_remote(completed.stdout)
+    return RepoContext(owner=owner, repo=repo)
+
+
+def resolve_repo_context(options: RepositoryScopeOptions, base_url: str | None = None) -> RepoContext:
+    """Resolve repository context from explicit selectors, then implicit discovery."""
+    if options.repo:
+        return repo_context_from_slug(options.repo)
+    if options.remote:
+        return repo_context_from_remote(options.remote)
+    return discover_repo_context(base_url)
+
+
 class RepositoryScope:
     def __init__(
         self,
@@ -60,7 +105,7 @@ class RepositoryScope:
     ):
         self.api = api or GiteaAdapter()
         self.scope_options = scope_options or RepositoryScopeOptions()
-        self.repo = repo or discover_repo_context(self.api.config.base_url)
+        self.repo = repo or resolve_repo_context(self.scope_options, self.api.config.base_url)
 
     @property
     def owner(self) -> str:

@@ -103,7 +103,7 @@ class TeaApiCoreTests(unittest.TestCase):
         self.assertEqual(args.repo, "sh/tea-skills")
 
     def test_default_repo_scope_accepts_parsed_scope_options_without_action_glue(self):
-        options = repo_scope.RepositoryScopeOptions(login="forgejo", remote="self-hosted", repo="sh/tea-skills")
+        options = repo_scope.RepositoryScopeOptions(login="forgejo")
         api = tea_api.GiteaAdapter(tea_api.TeaConfig("t", "https://forge.example"), opener=lambda request: None)
 
         with mock.patch.object(repo_scope, "discover_repo_context", return_value=tea_api.RepoContext("owner", "repo")):
@@ -111,6 +111,62 @@ class TeaApiCoreTests(unittest.TestCase):
 
         self.assertEqual(scope.repo, tea_api.RepoContext("owner", "repo"))
         self.assertIs(scope.scope_options, options)
+
+    def test_repository_scope_uses_explicit_repo_option(self):
+        options = repo_scope.RepositoryScopeOptions(repo="explicit/project")
+        api = tea_api.GiteaAdapter(tea_api.TeaConfig("t", "https://forge.example"), opener=lambda request: None)
+
+        with mock.patch.object(repo_scope, "discover_repo_context") as discover:
+            scope = repo_scope.default_repo_scope(api=api, options=options)
+
+        discover.assert_not_called()
+        self.assertEqual(scope.repo, tea_api.RepoContext("explicit", "project"))
+
+    def test_repository_scope_uses_explicit_remote_option(self):
+        options = repo_scope.RepositoryScopeOptions(remote="upstream")
+        api = tea_api.GiteaAdapter(tea_api.TeaConfig("t", "https://forge.example"), opener=lambda request: None)
+        completed = subprocess.CompletedProcess(
+            args=["git", "remote", "get-url", "upstream"],
+            returncode=0,
+            stdout="git@forge.example:remote-owner/remote-repo.git\n",
+            stderr="",
+        )
+
+        with mock.patch("actions.internal.repo_scope.subprocess.run", return_value=completed):
+            scope = repo_scope.default_repo_scope(api=api, options=options)
+
+        self.assertEqual(scope.repo, tea_api.RepoContext("remote-owner", "remote-repo"))
+
+    def test_repository_scope_prefers_repo_over_remote_option(self):
+        options = repo_scope.RepositoryScopeOptions(repo="explicit/project", remote="upstream")
+        api = tea_api.GiteaAdapter(tea_api.TeaConfig("t", "https://forge.example"), opener=lambda request: None)
+
+        with mock.patch("actions.internal.repo_scope.subprocess.run") as run:
+            scope = repo_scope.default_repo_scope(api=api, options=options)
+
+        run.assert_not_called()
+        self.assertEqual(scope.repo, tea_api.RepoContext("explicit", "project"))
+
+    def test_repository_scope_errors_for_missing_explicit_remote(self):
+        options = repo_scope.RepositoryScopeOptions(remote="upstream")
+        api = tea_api.GiteaAdapter(tea_api.TeaConfig("t", "https://forge.example"), opener=lambda request: None)
+        completed = subprocess.CompletedProcess(
+            args=["git", "remote", "get-url", "upstream"],
+            returncode=2,
+            stdout="",
+            stderr="error: No such remote 'upstream'\n",
+        )
+
+        with mock.patch("actions.internal.repo_scope.subprocess.run", return_value=completed):
+            with self.assertRaisesRegex(tea_api.RepoContextError, "--remote upstream"):
+                repo_scope.default_repo_scope(api=api, options=options)
+
+    def test_repository_scope_errors_for_invalid_explicit_repo(self):
+        options = repo_scope.RepositoryScopeOptions(repo="not-a-slug")
+        api = tea_api.GiteaAdapter(tea_api.TeaConfig("t", "https://forge.example"), opener=lambda request: None)
+
+        with self.assertRaisesRegex(tea_api.RepoContextError, "--repo owner/repo"):
+            repo_scope.default_repo_scope(api=api, options=options)
 
     def test_build_url_encodes_query_values(self):
         config = tea_api.TeaConfig(token="t", base_url="https://forge.example")
