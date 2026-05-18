@@ -397,6 +397,85 @@ class TeaApiCoreTests(unittest.TestCase):
 
         self.assertEqual(scope.repo, tea_api.RepoContext("sh", "tea-skills"))
 
+    def test_repository_scope_accepts_origin_when_it_matches_adapter_base_url(self):
+        completed = subprocess.CompletedProcess(
+            args=["git", "remote", "-v"],
+            returncode=0,
+            stdout=(
+                "origin\tgit@forge.example:owner/project.git (fetch)\n"
+                "origin\tgit@forge.example:owner/project.git (push)\n"
+                "github\tgit@github.com:owner/project.git (fetch)\n"
+                "github\tgit@github.com:owner/project.git (push)\n"
+            ),
+            stderr="",
+        )
+        api = tea_api.GiteaAdapter(
+            tea_api.TeaConfig("t", "https://forge.example"),
+            opener=lambda request: None,
+        )
+
+        with mock.patch("subprocess.run", return_value=completed):
+            scope = repo_scope.RepositoryScope(api)
+
+        self.assertEqual(scope.repo, tea_api.RepoContext("owner", "project"))
+
+    def test_repository_scope_errors_when_multiple_remotes_match_adapter_base_url(self):
+        completed = subprocess.CompletedProcess(
+            args=["git", "remote", "-v"],
+            returncode=0,
+            stdout=(
+                "origin\tgit@forge.example:owner/project.git (fetch)\n"
+                "origin\tgit@forge.example:owner/project.git (push)\n"
+                "mirror\tssh://git@forge.example/mirror/project.git (fetch)\n"
+                "mirror\tssh://git@forge.example/mirror/project.git (push)\n"
+            ),
+            stderr="",
+        )
+        api = tea_api.GiteaAdapter(
+            tea_api.TeaConfig("t", "https://forge.example"),
+            opener=lambda request: None,
+        )
+
+        with mock.patch("subprocess.run", return_value=completed):
+            with self.assertRaises(tea_api.RepoContextError) as raised:
+                repo_scope.RepositoryScope(api)
+
+        message = str(raised.exception)
+        self.assertIn("forge.example", message)
+        self.assertIn("origin", message)
+        self.assertIn("git@forge.example:owner/project.git", message)
+        self.assertIn("mirror", message)
+        self.assertIn("ssh://git@forge.example/mirror/project.git", message)
+        self.assertIn("--remote origin", message)
+        self.assertIn("--repo owner/project", message)
+        self.assertIn("--login <name>", message)
+
+    def test_repository_scope_errors_when_no_remote_matches_adapter_base_url(self):
+        completed = subprocess.CompletedProcess(
+            args=["git", "remote", "-v"],
+            returncode=0,
+            stdout=(
+                "origin\tgit@github.com:owner/project.git (fetch)\norigin\tgit@github.com:owner/project.git (push)\n"
+            ),
+            stderr="",
+        )
+        api = tea_api.GiteaAdapter(
+            tea_api.TeaConfig("t", "https://forge.example"),
+            opener=lambda request: None,
+        )
+
+        with mock.patch("subprocess.run", return_value=completed):
+            with self.assertRaises(tea_api.RepoContextError) as raised:
+                repo_scope.RepositoryScope(api)
+
+        message = str(raised.exception)
+        self.assertIn("forge.example", message)
+        self.assertIn("origin", message)
+        self.assertIn("git@github.com:owner/project.git", message)
+        self.assertIn("--remote origin", message)
+        self.assertIn("--repo owner/project", message)
+        self.assertIn("--login <name>", message)
+
     def test_edit_issue_comment_sends_body(self):
         calls = []
         scope = self.make_repo_scope(lambda request: calls.append(request) or tea_api.FakeHttpResponse(200, {"id": 12}))

@@ -304,10 +304,51 @@ def remote_host(remote_url: str) -> str | None:
     return None
 
 
-def _repo_context_from_matching_remote(base_url: str) -> RepoContext | None:
+def _remote_list(remotes: list[tuple[str, str]]) -> str:
+    if not remotes:
+        return "none"
+    return "; ".join(f"{name}: {url}" for name, url in remotes)
+
+
+def _repo_example(remotes: list[tuple[str, str]]) -> str | None:
+    for _, remote_url in remotes:
+        try:
+            owner, repo = parse_repo_remote(remote_url)
+        except RepoContextError:
+            continue
+        return f"--repo {owner}/{repo}"
+    return None
+
+
+def _corrective_examples(remotes: list[tuple[str, str]]) -> str:
+    examples: list[str] = []
+    if remotes:
+        examples.append(f"--remote {remotes[0][0]}")
+    repo_example = _repo_example(remotes)
+    if repo_example:
+        examples.append(repo_example)
+    examples.append("--login <name>")
+    return ", ".join(examples)
+
+
+def _ambiguous_matching_remotes_error(base_host: str, matches: list[tuple[str, str]]) -> str:
+    return (
+        f"multiple git remotes match tea backend host {base_host}: {_remote_list(matches)}. "
+        f"Rerun with one of: {_corrective_examples(matches)}."
+    )
+
+
+def _no_matching_remotes_error(base_host: str, remotes: list[tuple[str, str]]) -> str:
+    return (
+        f"no git remotes match tea backend host {base_host}; configured fetch remotes: {_remote_list(remotes)}. "
+        f"Rerun with one of: {_corrective_examples(remotes)}."
+    )
+
+
+def _repo_context_from_matching_remote(base_url: str) -> RepoContext:
     base_host = parse.urlparse(base_url).hostname
     if not base_host:
-        return None
+        raise RepoContextError(f"cannot determine host from tea base URL: {base_url}")
 
     try:
         completed = subprocess.run(
@@ -317,24 +358,30 @@ def _repo_context_from_matching_remote(base_url: str) -> RepoContext | None:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
-    except OSError:
-        return None
+    except OSError as exc:
+        raise RepoContextError(f"failed to list git remotes: {exc}") from exc
     if completed.returncode != 0:
-        return None
+        detail = completed.stderr.strip() or "failed to list git remotes"
+        raise RepoContextError(detail)
 
-    seen_urls: set[str] = set()
+    remotes: list[tuple[str, str]] = []
+    matches: list[tuple[str, str]] = []
     for line in completed.stdout.splitlines():
         columns = line.split()
         if len(columns) < 3 or columns[2] != "(fetch)":
             continue
+        remote_name = columns[0]
         remote_url = columns[1]
-        if remote_url in seen_urls:
-            continue
-        seen_urls.add(remote_url)
+        remotes.append((remote_name, remote_url))
         if remote_host(remote_url) == base_host:
-            owner, repo = parse_repo_remote(remote_url)
-            return RepoContext(owner=owner, repo=repo)
-    return None
+            matches.append((remote_name, remote_url))
+
+    if len(matches) == 1:
+        owner, repo = parse_repo_remote(matches[0][1])
+        return RepoContext(owner=owner, repo=repo)
+    if len(matches) > 1:
+        raise RepoContextError(_ambiguous_matching_remotes_error(base_host, matches))
+    raise RepoContextError(_no_matching_remotes_error(base_host, remotes))
 
 
 def discover_repo_context(base_url: str | None = None) -> RepoContext:
