@@ -136,7 +136,61 @@ def parse_repo_remote(remote_url: str) -> tuple[str, str]:
     return owner, repo
 
 
-def discover_repo_context() -> RepoContext:
+def remote_host(remote_url: str) -> str | None:
+    """Return the hostname from an HTTP(S), ssh://, or scp-style git remote URL."""
+    remote = remote_url.strip()
+    if not remote:
+        return None
+
+    if "://" in remote:
+        return parse.urlparse(remote).hostname
+    if ":" in remote and not remote.startswith("/"):
+        location = remote.split(":", 1)[0]
+        if "@" in location:
+            location = location.rsplit("@", 1)[1]
+        return location or None
+    return None
+
+
+def _repo_context_from_matching_remote(base_url: str) -> RepoContext | None:
+    base_host = parse.urlparse(base_url).hostname
+    if not base_host:
+        return None
+
+    try:
+        completed = subprocess.run(
+            ["git", "remote", "-v"],
+            check=False,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+    except OSError:
+        return None
+    if completed.returncode != 0:
+        return None
+
+    seen_urls: set[str] = set()
+    for line in completed.stdout.splitlines():
+        columns = line.split()
+        if len(columns) < 3 or columns[2] != "(fetch)":
+            continue
+        remote_url = columns[1]
+        if remote_url in seen_urls:
+            continue
+        seen_urls.add(remote_url)
+        if remote_host(remote_url) == base_host:
+            owner, repo = parse_repo_remote(remote_url)
+            return RepoContext(owner=owner, repo=repo)
+    return None
+
+
+def discover_repo_context(base_url: str | None = None) -> RepoContext:
+    if base_url:
+        matched = _repo_context_from_matching_remote(base_url)
+        if matched:
+            return matched
+
     try:
         completed = subprocess.run(
             ["git", "remote", "get-url", "origin"],

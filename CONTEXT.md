@@ -24,12 +24,26 @@ _Avoid_: prompt-as-assertion, exact-command-only proof
 A private internal Module that derives repo-scoped Forgejo API access from the current git remote and exposes repository-rooted request operations to domain Implementations.
 _Avoid_: repo helper, public API, repository command
 
+
+**Origin-first repository targeting**:
+The default expectation that agents and bundled actions target the `origin` remote unless the user states or requests another backend, login, remote, or repository.
+_Avoid_: silently preferring a non-origin compatible remote merely because it matches a configured backend
+
+
+**PRD artifact**:
+A product requirements document captured outside the repository, normally in the issue tracker, for feature planning and agent handoff. Use this instead of committing design documents to the repo unless the user explicitly asks for an in-repo design/spec file.
+_Avoid_: committed brainstorming design docs, repo-local planning artifacts by default
+
 ## Relationships
 
 - A **Bundled action** belongs to exactly one domain folder under `actions/`.
 - A **Pull request lookup action** is a **Bundled action** in the pull-requests domain.
 - An **Agent E2E prompt** expresses intent; an **Agent E2E assertion** verifies the routed skill, command behavior, and resulting artifacts.
 - When a workflow needs a detail command, assert the command class was used, but prove the specific data via state or files rather than pinning the prompt to an exact issue number or command form.
+
+- Planning artifacts for substantive behavior changes should be **PRD artifacts** in the issue tracker rather than committed design docs, unless the user explicitly requests an in-repo spec/design file.
+
+- Repository-targeting behavior is **origin-first**: prefer `origin` unless the user states or requests a different backend/remote/repository.
 
 ## Example dialogue
 
