@@ -18,6 +18,19 @@ tea pulls unresolve 123
 
 Use bundled actions only for pull request features that `tea` does not expose cleanly.
 
+## Repository targeting
+
+Pull request actions use active-host-first discovery by default. Pass explicit scope flags when the user names a login, remote, backend, or repository:
+
+```bash
+actions/pull-requests/find-by-branch.py --login codeberg --repo owner/project --head feature-branch
+actions/pull-requests/find-by-branch.py --remote upstream
+actions/pull-requests/set-automerge.py --login forgejo-prod --repo team/service 15 --enable
+```
+
+Use `--login` for an exact `tea` login, `--remote` for owner/repo from a git remote, and `--repo` for an explicit `owner/repo` slug.
+
+
 ## Find pull requests by branch
 
 Use the lookup action after creating a pull request when an agent needs structured PR data for follow-up steps:

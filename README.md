@@ -108,7 +108,7 @@ Each skill is a focused, user-invokable `skills/<name>/SKILL.md` file. The curre
 
 Bundled actions are small Python executables shipped with this plugin. They supplement `tea`; they do not replace it. Use them for API-only operations that Gitea/Forgejo supports but `tea` does not expose cleanly, such as issue dependencies, issue moderation, pull-request auto-merge configuration, milestone edit gaps, and organization labels.
 
-Actions run on your machine with your user privileges, read the authentication configured by `tea login`, and derive the target owner/repository from the `origin` remote of the repository where the action is executed. When an agent runs a bundled action for your project, it should resolve the action path from the installed plugin and keep its working directory in your target repository.
+Actions run on your machine with your user privileges and read the authentication configured by `tea login`. Repository-scoped bundled actions use active-host-first discovery by default: they target the git remote whose host matches the active `tea` backend, and they fail clearly if that match is ambiguous. Agents should pass explicit `--login`, `--remote`, or `--repo` flags when you name a backend, remote, or repository, resolve the action path from the installed plugin, and keep the working directory in your target repository.
 
 See [`actions/README.md`](actions/README.md) and the domain references for exact commands and arguments:
 
