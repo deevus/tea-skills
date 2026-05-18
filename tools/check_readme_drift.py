@@ -17,6 +17,22 @@ PUBLIC_ACTION_DOMAIN_NAMES = {
     "pull-requests": "Pull Requests",
 }
 
+REPOSITORY_TARGETING_DOMAIN_READMES = [
+    Path("actions/issues/README.md"),
+    Path("actions/pull-requests/README.md"),
+    Path("actions/milestones/README.md"),
+]
+REPOSITORY_TARGETING_SKILLS = [
+    Path("skills/issue-comments/SKILL.md"),
+    Path("skills/issue-moderation/SKILL.md"),
+    Path("skills/issue-dependencies/SKILL.md"),
+    Path("skills/create-pull/SKILL.md"),
+    Path("skills/review-pull/SKILL.md"),
+    Path("skills/merge-pull/SKILL.md"),
+    Path("skills/milestones/SKILL.md"),
+]
+STALE_ORIGIN_FIRST_FILES = [Path("README.md"), Path("actions/README.md"), Path("actions/internal/README.md")]
+
 
 def skill_names(root: Path) -> list[str]:
     return sorted(path.parent.name for path in (root / "skills").glob("*/SKILL.md"))
@@ -56,6 +72,55 @@ def check_readme_references_public_action_domains(root: Path = ROOT) -> list[str
     return errors
 
 
+def _read_if_exists(path: Path) -> str:
+    if not path.exists():
+        return ""
+    return path.read_text(encoding="utf-8")
+
+
+def _normalized(text: str) -> str:
+    return text.lower().replace("`", "")
+
+
+def _contains_stale_origin_first_wording(text: str) -> bool:
+    normalized = _normalized(text)
+    return (
+        "git remote get-url origin" in normalized
+        or "origin-first" in normalized
+        or "derive" in normalized
+        and "origin remote" in normalized
+    )
+
+
+def check_repository_targeting_docs(root: Path = ROOT) -> list[str]:
+    errors: list[str] = []
+
+    for relative in STALE_ORIGIN_FIRST_FILES:
+        if _contains_stale_origin_first_wording(_read_if_exists(root / relative)):
+            errors.append(f"{relative.as_posix()} contains stale origin-first repository targeting wording")
+
+    actions_readme = _read_if_exists(root / "actions" / "README.md")
+    actions_readme_normalized = _normalized(actions_readme)
+    for required in ["active-host-first", "--login", "--remote", "--repo", "codeberg", "self-hosted"]:
+        if required not in actions_readme_normalized:
+            errors.append(f"actions/README.md should document {required} repository targeting")
+
+    for relative in REPOSITORY_TARGETING_DOMAIN_READMES:
+        text = _normalized(_read_if_exists(root / relative))
+        for flag in ["--login", "--remote", "--repo"]:
+            if flag not in text:
+                errors.append(f"{relative.as_posix()} should document {flag} repository targeting")
+        if "active-host-first" not in text:
+            errors.append(f"{relative.as_posix()} should mention active-host-first discovery")
+
+    for relative in REPOSITORY_TARGETING_SKILLS:
+        text = _normalized(_read_if_exists(root / relative))
+        if not all(term in text for term in ["explicit scope flags", "--login", "--remote", "--repo"]):
+            errors.append(f"{relative.as_posix()} should tell agents to pass explicit scope flags")
+
+    return errors
+
+
 def check_readme_matches_plugin_metadata(root: Path = ROOT) -> list[str]:
     readme = (root / "README.md").read_text(encoding="utf-8")
     plugin = json.loads((root / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
@@ -82,6 +147,8 @@ def all_errors(root: Path = ROOT) -> list[str]:
     errors.extend(check_readme_references_every_skill(root))
     errors.extend(check_readme_references_public_action_domains(root))
     errors.extend(check_readme_matches_plugin_metadata(root))
+
+    errors.extend(check_repository_targeting_docs(root))
     return errors
 
 

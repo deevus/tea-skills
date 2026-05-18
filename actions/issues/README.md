@@ -14,6 +14,19 @@ tea comment 42 "This is a comment"
 
 Use bundled actions only for Gitea/Forgejo issue features that `tea` does not expose cleanly.
 
+## Repository targeting
+
+Issue actions use active-host-first discovery by default. Pass explicit scope flags when the user names a login, remote, backend, or repository:
+
+```bash
+actions/issues/dependency-ready.py --login codeberg --repo owner/project
+actions/issues/pin.py --remote upstream 42
+actions/issues/comment-edit.py --login forgejo-prod --repo team/service 1234 "Updated comment"
+```
+
+Use `--login` for an exact `tea` login, `--remote` for owner/repo from a git remote, and `--repo` for an explicit `owner/repo` slug.
+
+
 ## Comment edit
 
 ```bash

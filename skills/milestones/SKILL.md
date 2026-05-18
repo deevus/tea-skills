@@ -41,6 +41,9 @@ tea milestones delete "v1.0"
 
 The tea CLI doesn't have a milestone edit command. For the bundled action, see `actions/milestones/README.md`.
 
+
+Pass explicit scope flags (`--login`, `--remote`, or `--repo`) to bundled actions when the user names a login, remote, backend, or repository. Otherwise, bundled actions use active-host-first discovery.
+
 ## Tips
 
 - Milestones are identified by name in CLI, by ID in the API-backed milestone edit action

@@ -8,4 +8,7 @@ user-invokable: true
 
 "A depends on B" means B must be done first. B *blocks* A. The tea CLI has no dependency support. For bundled actions and exact arguments, see `actions/issues/README.md`.
 
+
+Pass explicit scope flags (`--login`, `--remote`, or `--repo`) to bundled actions when the user names a login, remote, backend, or repository. Otherwise, bundled actions use active-host-first discovery.
+
 Cross-repo dependencies are not supported by the bundled actions in this version.

@@ -7,3 +7,6 @@ user-invokable: true
 # Issue Moderation
 
 Features not available in the tea CLI. For exact bundled action commands and arguments, see `actions/issues/README.md`.
+
+
+Pass explicit scope flags (`--login`, `--remote`, or `--repo`) to bundled actions when the user names a login, remote, backend, or repository. Otherwise, bundled actions use active-host-first discovery.

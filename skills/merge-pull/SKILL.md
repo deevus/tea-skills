@@ -8,6 +8,9 @@ user-invokable: true
 
 Prefer `tea pulls` commands for merge workflows. Bundled actions are only for CLI gaps and are documented under `actions/pull-requests/README.md`.
 
+
+Pass explicit scope flags (`--login`, `--remote`, or `--repo`) to bundled actions when the user names a login, remote, backend, or repository. Otherwise, bundled actions use active-host-first discovery.
+
 ## Merge
 
 ```bash

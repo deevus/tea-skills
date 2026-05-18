@@ -5,7 +5,7 @@ Internal Python Modules support bundled actions. They are not user-facing comman
 Responsibilities:
 
 - `tea_api.py` discovers tea config, sends authenticated Gitea/Forgejo HTTP requests, translates transport errors, and records action audit events
-- `repo_scope.py` derives repo-scoped Forgejo API access from `git remote get-url origin`
+- `repo_scope.py` derives repo-scoped Forgejo API access from active-host-first tea backend and git remote matching, plus explicit `--login`, `--remote`, and `--repo` options
 - `org_scope.py` derives organization-scoped Forgejo API access from the current repository owner
 - domain Modules (`issues.py`, `pulls.py`, `milestones.py`, `org_labels.py`) expose domain operations for action executables
 
