@@ -8,7 +8,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "internal"))
 from tea_api import ApiError, TeaConfigError, RepoContextError, run_action
-from repo_scope import default_repo_scope
+from repo_scope import add_repository_scope_arguments, default_repo_scope, repository_scope_options_from_args
 from pulls import find_by_branch
 
 
@@ -51,6 +51,7 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--head", help="Head branch, or owner:branch for fork pull requests")
     parser.add_argument("--base", help="Optional target base branch name")
     parser.add_argument("--state", choices=sorted(VALID_STATES), default="open")
+    add_repository_scope_arguments(parser)
     args = parser.parse_args(argv)
 
     base = args.base.strip() if args.base is not None else None
@@ -67,7 +68,9 @@ def main(argv: list[str]) -> int:
         return 1
 
     try:
-        matches = find_by_branch(default_repo_scope(), head, base=base, state=args.state)
+        matches = find_by_branch(
+            default_repo_scope(options=repository_scope_options_from_args(args)), head, base=base, state=args.state
+        )
     except (ApiError, TeaConfigError, RepoContextError) as exc:
         write_error("api_error", str(exc))
         return 1
