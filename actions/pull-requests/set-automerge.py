@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "internal"))
 from tea_api import ApiError, TeaConfigError, RepoContextError, run_action
-from repo_scope import default_repo_scope
+from repo_scope import add_repository_scope_arguments, default_repo_scope, repository_scope_options_from_args
 from pulls import cancel_automerge, enable_automerge
 
 
@@ -17,9 +17,10 @@ def main(argv: list[str]) -> int:
     mode.add_argument("--cancel", action="store_true")
     parser.add_argument("--style", choices=["merge", "squash", "rebase"], default="squash")
     parser.add_argument("--message", default="")
+    add_repository_scope_arguments(parser)
     args = parser.parse_args(argv)
     try:
-        scope = default_repo_scope()
+        scope = default_repo_scope(options=repository_scope_options_from_args(args))
         if args.enable:
             enable_automerge(scope, args.pr, args.style, args.message)
             print(f"Auto-merge enabled on PR #{args.pr} ({args.style})")
