@@ -9,9 +9,23 @@ from typing import Any, Mapping
 from urllib import parse
 
 try:
-    from .tea_api import GiteaAdapter, RepoContext, RepoContextError, discover_repo_context, parse_repo_remote
+    from .tea_api import (
+        GiteaAdapter,
+        RepoContext,
+        RepoContextError,
+        discover_repo_context,
+        parse_repo_remote,
+        read_tea_config,
+    )
 except ImportError:
-    from tea_api import GiteaAdapter, RepoContext, RepoContextError, discover_repo_context, parse_repo_remote
+    from tea_api import (
+        GiteaAdapter,
+        RepoContext,
+        RepoContextError,
+        discover_repo_context,
+        parse_repo_remote,
+        read_tea_config,
+    )
 
 
 @dataclass(frozen=True)
@@ -63,8 +77,8 @@ def repo_context_from_slug(slug: str) -> RepoContext:
     return RepoContext(owner=parts[0], repo=parts[1])
 
 
-def repo_context_from_remote(remote: str) -> RepoContext:
-    """Resolve an explicit git remote name into an owner/repository context."""
+def remote_url_from_name(remote: str) -> str:
+    """Resolve an explicit git remote name into its configured URL."""
     try:
         completed = subprocess.run(
             ["git", "remote", "get-url", remote],
@@ -82,8 +96,12 @@ def repo_context_from_remote(remote: str) -> RepoContext:
             f"failed to read --remote {remote}: {detail}. "
             f"Use --repo owner/repo or add the remote with: git remote add {remote} <url>"
         )
+    return completed.stdout
 
-    owner, repo = parse_repo_remote(completed.stdout)
+
+def repo_context_from_remote(remote: str) -> RepoContext:
+    """Resolve an explicit git remote name into an owner/repository context."""
+    owner, repo = parse_repo_remote(remote_url_from_name(remote))
     return RepoContext(owner=owner, repo=repo)
 
 
@@ -151,4 +169,8 @@ def default_repo_scope(
     api: GiteaAdapter | None = None,
     options: RepositoryScopeOptions | None = None,
 ) -> RepositoryScope:
-    return RepositoryScope(api=api, scope_options=options)
+    scope_options = options or RepositoryScopeOptions()
+    if api is None:
+        remote_url = remote_url_from_name(scope_options.remote) if scope_options.remote else None
+        api = GiteaAdapter(config=read_tea_config(login=scope_options.login, remote_url=remote_url))
+    return RepositoryScope(api=api, scope_options=scope_options)

@@ -38,21 +38,65 @@ class TeaApiCoreTests(unittest.TestCase):
                 with mock.patch.object(Path, "home", return_value=home):
                     self.assertEqual(tea_api.config_path(), home / ".config" / "tea" / "config.yml")
 
-    def test_read_config_extracts_first_token_and_url(self):
+    def test_read_config_uses_default_login_from_logins(self):
         with tempfile.TemporaryDirectory() as tmp:
             config = Path(tmp) / "config.yml"
             config.write_text(
-                "logins:\n  - name: main\n    url: https://forge.example\n    token: abc123\n",
+                "logins:\n"
+                "  - name: forgejo\n"
+                "    url: https://forge.example\n"
+                "    token: forge-token\n"
+                "    default: true\n"
+                "  - name: codeberg.org\n"
+                "    url: https://codeberg.org\n"
+                "    token: codeberg-token\n",
                 encoding="utf-8",
             )
-            result = tea_api.read_tea_config(config)
-            self.assertEqual(result.token, "abc123")
+            with mock.patch.object(tea_api, "_remote_urls_from_git", return_value={}):
+                result = tea_api.read_tea_config(config)
+            self.assertEqual(result.token, "forge-token")
             self.assertEqual(result.base_url, "https://forge.example")
 
-    def test_read_config_errors_when_token_missing(self):
+    def test_read_config_resolves_named_login(self):
         with tempfile.TemporaryDirectory() as tmp:
             config = Path(tmp) / "config.yml"
-            config.write_text("url: https://forge.example\n", encoding="utf-8")
+            config.write_text(
+                "logins:\n"
+                "  - name: forgejo\n"
+                "    url: https://forge.example\n"
+                "    token: forge-token\n"
+                "  - name: codeberg.org\n"
+                "    url: https://codeberg.org\n"
+                "    token: codeberg-token\n",
+                encoding="utf-8",
+            )
+            result = tea_api.read_tea_config(config, login="codeberg.org")
+            self.assertEqual(result.token, "codeberg-token")
+            self.assertEqual(result.base_url, "https://codeberg.org")
+
+    def test_read_config_unknown_login_lists_available_names(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = Path(tmp) / "config.yml"
+            config.write_text(
+                "logins:\n"
+                "  - name: forgejo\n"
+                "    url: https://forge.example\n"
+                "    token: forge-token\n"
+                "  - name: codeberg.org\n"
+                "    url: https://codeberg.org\n"
+                "    token: codeberg-token\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(tea_api.TeaConfigError, "forgejo, codeberg.org"):
+                tea_api.read_tea_config(config, login="missing")
+
+    def test_read_config_errors_when_login_token_missing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = Path(tmp) / "config.yml"
+            config.write_text(
+                "logins:\n  - name: forgejo\n    url: https://forge.example\n",
+                encoding="utf-8",
+            )
             with self.assertRaisesRegex(tea_api.TeaConfigError, "token"):
                 tea_api.read_tea_config(config)
 
@@ -167,6 +211,99 @@ class TeaApiCoreTests(unittest.TestCase):
 
         with self.assertRaisesRegex(tea_api.RepoContextError, "--repo owner/repo"):
             repo_scope.default_repo_scope(api=api, options=options)
+
+    def test_default_repo_scope_uses_named_login_with_repo_selector(self):
+        options = repo_scope.RepositoryScopeOptions(login="codeberg.org", repo="deevus/tea-skills")
+        with tempfile.TemporaryDirectory() as tmp:
+            config = Path(tmp) / "config.yml"
+            config.write_text(
+                "logins:\n"
+                "  - name: forgejo\n"
+                "    url: https://forge.example\n"
+                "    token: forge-token\n"
+                "  - name: codeberg.org\n"
+                "    url: https://codeberg.org\n"
+                "    token: codeberg-token\n",
+                encoding="utf-8",
+            )
+            with mock.patch.object(tea_api, "config_path", return_value=config):
+                scope = repo_scope.default_repo_scope(options=options)
+
+        self.assertEqual(scope.api.config.token, "codeberg-token")
+        self.assertEqual(scope.api.config.base_url, "https://codeberg.org")
+        self.assertEqual(scope.repo, tea_api.RepoContext("deevus", "tea-skills"))
+
+    def test_default_repo_scope_infers_login_from_explicit_remote(self):
+        options = repo_scope.RepositoryScopeOptions(remote="codeberg")
+        with tempfile.TemporaryDirectory() as tmp:
+            config = Path(tmp) / "config.yml"
+            config.write_text(
+                "logins:\n"
+                "  - name: forgejo\n"
+                "    url: https://forge.example\n"
+                "    token: forge-token\n"
+                "  - name: codeberg.org\n"
+                "    url: https://codeberg.org\n"
+                "    token: codeberg-token\n",
+                encoding="utf-8",
+            )
+            completed = subprocess.CompletedProcess(
+                args=["git", "remote", "get-url", "codeberg"],
+                returncode=0,
+                stdout="git@codeberg.org:deevus/tea-skills.git\n",
+                stderr="",
+            )
+            with mock.patch.object(tea_api, "config_path", return_value=config):
+                with mock.patch("actions.internal.repo_scope.subprocess.run", return_value=completed):
+                    scope = repo_scope.default_repo_scope(options=options)
+
+        self.assertEqual(scope.api.config.token, "codeberg-token")
+        self.assertEqual(scope.api.config.base_url, "https://codeberg.org")
+        self.assertEqual(scope.repo, tea_api.RepoContext("deevus", "tea-skills"))
+
+    def test_default_repo_scope_uses_named_login_with_remote_selector(self):
+        options = repo_scope.RepositoryScopeOptions(login="forgejo", remote="codeberg")
+        with tempfile.TemporaryDirectory() as tmp:
+            config = Path(tmp) / "config.yml"
+            config.write_text(
+                "logins:\n"
+                "  - name: forgejo\n"
+                "    url: https://forge.example\n"
+                "    token: forge-token\n"
+                "  - name: codeberg.org\n"
+                "    url: https://codeberg.org\n"
+                "    token: codeberg-token\n",
+                encoding="utf-8",
+            )
+            completed = subprocess.CompletedProcess(
+                args=["git", "remote", "get-url", "codeberg"],
+                returncode=0,
+                stdout="git@codeberg.org:deevus/tea-skills.git\n",
+                stderr="",
+            )
+            with mock.patch.object(tea_api, "config_path", return_value=config):
+                with mock.patch("actions.internal.repo_scope.subprocess.run", return_value=completed):
+                    scope = repo_scope.default_repo_scope(options=options)
+
+        self.assertEqual(scope.api.config.token, "forge-token")
+        self.assertEqual(scope.api.config.base_url, "https://forge.example")
+        self.assertEqual(scope.repo, tea_api.RepoContext("deevus", "tea-skills"))
+
+    def test_read_config_errors_when_remote_host_matches_multiple_logins(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = Path(tmp) / "config.yml"
+            config.write_text(
+                "logins:\n"
+                "  - name: work\n"
+                "    url: https://forge.example\n"
+                "    token: work-token\n"
+                "  - name: personal\n"
+                "    url: https://forge.example\n"
+                "    token: personal-token\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(tea_api.TeaConfigError, "work, personal"):
+                tea_api.read_tea_config(config, remote_url="git@forge.example:owner/repo.git")
 
     def test_build_url_encodes_query_values(self):
         config = tea_api.TeaConfig(token="t", base_url="https://forge.example")
