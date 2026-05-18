@@ -15,20 +15,24 @@ from dokimasia.suite import create_file_spy
 from dokimasia.suite.layout import create_run_id, prepare_run_root
 from tests.e2e.tea_suite.mock_forgejo import MockForgejo, create_mock_forgejo
 from tests.e2e.tea_suite.mock_tea import MockTea, create_mock_tea, save_mock_tea_state
+from tests.e2e.tea_suite.repository_scope_args import without_repository_scope_args
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def _is_issue_show_invocation(command) -> bool:
+    argv = without_repository_scope_args(command.argv)
+    return len(argv) >= 2 and (
+        argv[1].isdigit() or (argv[1] in {"show", "s"} and any(arg.isdigit() for arg in argv[2:]))
+    )
+
+
 TEA = cmd.spy("tea")
 ISSUE_CREATE = TEA.match(pattern=[("issues", "issue", "i"), ("create", "c")])
 ISSUE_LIST = TEA.match(pattern=[("issues", "issue", "i"), ("list", "ls", "l")])
 ISSUE_SHOW = TEA.match(
     pattern=[("issues", "issue", "i")],
-    where=lambda command: (
-        len(command.argv) >= 2
-        and (
-            command.argv[1].isdigit()
-            or (command.argv[1] in {"show", "s"} and any(arg.isdigit() for arg in command.argv[2:]))
-        )
-    ),
+    where=_is_issue_show_invocation,
 )
 DEPENDENCY_ADD_ACTION = cmd.match("actions/issues/dependency-add.py")
 LOCK_ACTION = cmd.match("actions/issues/lock.py")
