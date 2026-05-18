@@ -3,16 +3,21 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
-import re
 import subprocess
 from typing import Any, Callable, Mapping
 from urllib import parse, request
 from urllib.error import HTTPError, URLError
+
+try:
+    from .vendor import yaml as vendored_yaml
+except ImportError:
+    from vendor import yaml as vendored_yaml
 
 
 class TeaConfigError(RuntimeError):
@@ -40,6 +45,14 @@ class ApiError(RuntimeError):
 class TeaConfig:
     token: str
     base_url: str
+
+
+@dataclass(frozen=True)
+class TeaLogin:
+    name: str
+    token: str
+    base_url: str
+    default: bool = False
 
 
 @dataclass(frozen=True)
@@ -87,29 +100,168 @@ def config_path() -> Path:
     return Path.home() / ".config" / "tea" / "config.yml"
 
 
-def _first_yaml_scalar(text: str, key: str) -> str | None:
-    pattern = re.compile(rf"^\s*{re.escape(key)}\s*:\s*(.+?)\s*$")
-    for line in text.splitlines():
-        match = pattern.match(line)
-        if match:
-            return match.group(1).strip().strip('"').strip("'")
-    return None
+def _truthy(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.lower() == "true"
+    return bool(value)
 
 
-def read_tea_config(path: Path | None = None) -> TeaConfig:
+def read_tea_logins(path: Path | None = None) -> list[TeaLogin]:
     cfg_path = path or config_path()
     try:
         text = cfg_path.read_text(encoding="utf-8")
     except FileNotFoundError as exc:
         raise TeaConfigError(f"tea config not found at {cfg_path}; run tea login first") from exc
 
-    token = _first_yaml_scalar(text, "token")
-    base_url = _first_yaml_scalar(text, "url")
-    if not token:
-        raise TeaConfigError(f"tea config at {cfg_path} does not contain a token")
-    if not base_url:
-        raise TeaConfigError(f"tea config at {cfg_path} does not contain a url")
-    return TeaConfig(token=token, base_url=base_url.rstrip("/"))
+    try:
+        data = vendored_yaml.safe_load(text)
+    except vendored_yaml.YAMLError as exc:
+        raise TeaConfigError(f"failed to parse tea config at {cfg_path}: {exc}") from exc
+
+    raw_logins = data.get("logins") if isinstance(data, dict) else None
+    if not isinstance(raw_logins, list) or not raw_logins:
+        raise TeaConfigError(f"tea config at {cfg_path} does not contain logins")
+
+    logins: list[TeaLogin] = []
+    for index, raw_login in enumerate(raw_logins, start=1):
+        if not isinstance(raw_login, dict):
+            raise TeaConfigError(f"tea config login #{index} is not a mapping")
+        name = raw_login.get("name")
+        token = raw_login.get("token")
+        url = raw_login.get("url")
+        if not name:
+            raise TeaConfigError(f"tea config login #{index} does not contain a name")
+        if not token:
+            raise TeaConfigError(f"tea config login {name!r} does not contain a token")
+        if not url:
+            raise TeaConfigError(f"tea config login {name!r} does not contain a url")
+        logins.append(
+            TeaLogin(
+                name=str(name),
+                token=str(token),
+                base_url=str(url).rstrip("/"),
+                default=_truthy(raw_login.get("default", False)),
+            )
+        )
+    return logins
+
+
+def _available_login_names(logins: list[TeaLogin]) -> str:
+    return ", ".join(login.name for login in logins) or "none"
+
+
+def _login_config(login: TeaLogin) -> TeaConfig:
+    return TeaConfig(token=login.token, base_url=login.base_url)
+
+
+def _select_login_by_name(logins: list[TeaLogin], name: str) -> TeaLogin:
+    for login in logins:
+        if login.name == name:
+            return login
+    raise TeaConfigError(f"unknown tea login {name!r}; available logins: {_available_login_names(logins)}")
+
+
+def _select_login_by_remote_host(logins: list[TeaLogin], remote_url: str) -> TeaLogin:
+    host = remote_host(remote_url)
+    if not host:
+        raise TeaConfigError(f"cannot determine host from git remote URL: {remote_url}")
+    matches = [login for login in logins if parse.urlparse(login.base_url).hostname == host]
+    if not matches:
+        raise TeaConfigError(
+            f"git remote host {host} does not match any tea login; "
+            f"available logins: {_available_login_names(logins)}. Use --login <name> or run tea login add."
+        )
+    if len(matches) > 1:
+        raise TeaConfigError(
+            f"git remote host {host} matches multiple tea logins: {_available_login_names(matches)}. "
+            "Use --login <name>."
+        )
+    return matches[0]
+
+
+def _remote_urls_from_git() -> dict[str, str]:
+    try:
+        completed = subprocess.run(
+            ["git", "remote", "-v"],
+            check=False,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+    except OSError:
+        return {}
+    if completed.returncode != 0:
+        return {}
+
+    urls: dict[str, str] = {}
+    for line in completed.stdout.splitlines():
+        columns = line.split()
+        if len(columns) < 3 or columns[2] != "(fetch)":
+            continue
+        urls.setdefault(columns[0], columns[1])
+    return urls
+
+
+def _select_login_by_configured_remotes(logins: list[TeaLogin]) -> TeaLogin | None:
+    login_hosts = defaultdict(list)
+    for login in logins:
+        host = parse.urlparse(login.base_url).hostname
+        if host:
+            login_hosts[host].append(login)
+
+    matches: dict[str, tuple[str, TeaLogin]] = {}
+    ambiguous_same_host: dict[str, list[TeaLogin]] = {}
+    for remote_name, remote_url in _remote_urls_from_git().items():
+        host = remote_host(remote_url)
+        if not host or host not in login_hosts:
+            continue
+        host_logins = login_hosts[host]
+        if len(host_logins) > 1:
+            ambiguous_same_host[host] = host_logins
+            continue
+        matches[host] = (remote_name, host_logins[0])
+
+    if ambiguous_same_host:
+        host, host_logins = next(iter(ambiguous_same_host.items()))
+        raise TeaConfigError(
+            f"configured git remote host {host} matches multiple tea logins: "
+            f"{_available_login_names(host_logins)}. Use --login <name>."
+        )
+    if len(matches) > 1:
+        details = ", ".join(f"{login.name} for remote {remote}" for remote, login in matches.values())
+        raise TeaConfigError(
+            f"multiple tea logins match configured git remotes: {details}. Use --login <name> or --remote <name>."
+        )
+    if len(matches) == 1:
+        return next(iter(matches.values()))[1]
+    return None
+
+
+def _select_default_login(logins: list[TeaLogin]) -> TeaLogin:
+    for login in logins:
+        if login.default:
+            return login
+    return logins[0]
+
+
+def read_tea_config(
+    path: Path | None = None,
+    *,
+    login: str | None = None,
+    remote_url: str | None = None,
+) -> TeaConfig:
+    logins = read_tea_logins(path)
+    if login:
+        return _login_config(_select_login_by_name(logins, login))
+    if remote_url:
+        return _login_config(_select_login_by_remote_host(logins, remote_url))
+
+    matched = _select_login_by_configured_remotes(logins)
+    if matched:
+        return _login_config(matched)
+    return _login_config(_select_default_login(logins))
 
 
 def parse_repo_remote(remote_url: str) -> tuple[str, str]:
