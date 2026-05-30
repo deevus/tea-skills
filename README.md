@@ -37,7 +37,7 @@ claude plugin install tea@tea-skills
 
 ### Other agents with `npx skills`
 
-Install the repository as one namespaced package so the skills and bundled action scripts stay together under `~/.agents/skills/tea-skills`.
+Install all focused skills into the shared Agent Skills directory:
 
 From GitHub:
 
@@ -45,16 +45,9 @@ From GitHub:
 npx skills add deevus/tea-skills --skill '*' --agent universal
 ```
 
-`--agent universal` is intentional: it targets the shared Agent Skills directory (`~/.agents/skills`). The package installs as:
+`--agent universal` is intentional: it targets `~/.agents/skills`, which Pi and many other agents scan. Each skill installs as a top-level sibling such as `~/.agents/skills/issue-dependencies`.
 
-```text
-~/.agents/skills/tea-skills/
-├── SKILL.md
-├── skills/
-└── actions/
-```
-
-Pi and other agents that scan `~/.agents/skills` can then discover the focused skills under `tea-skills/skills/<name>/SKILL.md`, while those skills can still use bundled resources such as `actions/`.
+Skills that need bundled actions include an `actions/` resource directory, so commands such as `actions/issues/dependency-add.py` resolve relative to the active skill directory after installation.
 
 Compatibility depends on the agent's skill support. Claude Code plugin hooks are Claude-specific, but the skill instructions themselves are plain `SKILL.md` files.
 

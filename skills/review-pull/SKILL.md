@@ -8,7 +8,7 @@ user-invokable: true
 
 Prefer `tea pulls` commands for review workflows. Bundled actions are only for CLI gaps and are documented under `actions/pull-requests/README.md`.
 
-When resolving `actions/...` paths, start at the installed tea-skills package root (for `npx skills` installs, `~/.agents/skills/tea-skills`).
+When resolving `actions/...` paths, use the `actions/` directory bundled relative to this skill directory.
 
 
 Pass explicit scope flags (`--login`, `--remote`, or `--repo`) to bundled actions when the user names a login, remote, backend, or repository. Otherwise, bundled actions use active-host-first discovery.
@@ -40,7 +40,7 @@ tea pulls unresolve 123
 
 ## Forks and Upstream PRs
 
-See [pull-request-forks](../pull-request-forks.md).
+See [pull-request-forks](pull-request-forks.md).
 
 For interactive inline review, use:
 

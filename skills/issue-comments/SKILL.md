@@ -22,7 +22,7 @@ tea issues 42 --comments
 
 The tea CLI can't edit comments. For the bundled action, see `actions/issues/README.md`.
 
-When resolving `actions/...` paths, start at the installed tea-skills package root (for `npx skills` installs, `~/.agents/skills/tea-skills`).
+When resolving `actions/...` paths, use the `actions/` directory bundled relative to this skill directory.
 
 
 Pass explicit scope flags (`--login`, `--remote`, or `--repo`) to bundled actions when the user names a login, remote, backend, or repository. Otherwise, bundled actions use active-host-first discovery.

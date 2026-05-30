@@ -31,7 +31,7 @@ tea pulls list --output json | \
 
 ## Forks and Upstream PRs
 
-See [pull-request-forks](../pull-request-forks.md).
+See [pull-request-forks](pull-request-forks.md).
 
 ## Tips
 

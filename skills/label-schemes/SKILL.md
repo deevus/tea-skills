@@ -50,4 +50,4 @@ Use `tea labels list --output json` when parsing is necessary, then apply `tea l
 
 For organization-level label actions, see `actions/org-labels/README.md`.
 
-When resolving `actions/...` paths, start at the installed tea-skills package root (for `npx skills` installs, `~/.agents/skills/tea-skills`).
+When resolving `actions/...` paths, use the `actions/` directory bundled relative to this skill directory.
