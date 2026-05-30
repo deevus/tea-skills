@@ -41,6 +41,8 @@ tea milestones delete "v1.0"
 
 The tea CLI doesn't have a milestone edit command. For the bundled action, see `actions/milestones/README.md`.
 
+When resolving `actions/...` paths, start at the installed tea-skills package root (for `npx skills` installs, `~/.agents/skills/tea-skills`).
+
 
 Pass explicit scope flags (`--login`, `--remote`, or `--repo`) to bundled actions when the user names a login, remote, backend, or repository. Otherwise, bundled actions use active-host-first discovery.
 
